@@ -1,9 +1,9 @@
 import { BotConfig } from "../core/config.js";
-import { SessionService } from "../services/SessionService.js"; // Ensure SessionService is imported
+import { SessionService } from "../services/SessionService.js";
 import { GameInterface } from "./GameInterface.js";
 import { WebSocketInfo } from "../core/types.js";
 import { getRandomKBBI } from "../utils/randomKBBI.js";
-import { randomBytes } from "crypto"; // For generating unique IDs
+import { randomBytes } from "crypto";
 
 const MAX_ATTEMPTS = 6;
 const MASK_CHAR = "#";
@@ -20,13 +20,11 @@ interface HangmanSession {
   hostUser: string;
 }
 
-// Store active game states statically (or use a dedicated state manager)
 // Key: gameId, Value: HangmanSession
 const activeHangmanGames: Map<string, HangmanSession> = new Map();
 
-// Helper to generate short unique IDs
 function generateGameId(): string {
-  return randomBytes(3).toString("hex"); // Generates a 6-character hex ID
+  return randomBytes(3).toString("hex");
 }
 
 export class HangmanGame implements GameInterface {
@@ -135,7 +133,7 @@ export class HangmanGame implements GameInterface {
     sessionService: SessionService
   ) {
     let gameId = generateGameId();
-    // Ensure ID is unique (highly unlikely collision, but good practice)
+    // Ensure ID is unique
     while (activeHangmanGames.has(gameId)) {
       gameId = generateGameId();
     }
@@ -171,7 +169,7 @@ export class HangmanGame implements GameInterface {
       }hangman [huruf]\nBergabung dengan: ${
         BotConfig.prefix
       }hangman join ${gameId}`,
-      mentions: [user], // Mention the host who started the game
+      mentions: [user],
     });
   }
 
@@ -195,34 +193,31 @@ export class HangmanGame implements GameInterface {
       await sock.sendMessage(jid, {
         text: `Kamu sudah bergabung dalam game Hangman *${gameId}*.`,
       });
-      // Ensure user session link is correct
+
       sessionService.setSession(jid, user, "hangman", { gameId });
       return;
     }
 
-    // Add player to the game state
     gameData.players.push(user);
     gameData.playerScores[user] = 0;
 
-    // Update the master game state
     activeHangmanGames.set(gameId, gameData);
 
     // Link the user to this gameId in SessionService
     sessionService.setSession(jid, user, "hangman", { gameId });
 
     // Prepare mentions for the joining user and all current players
-    const mentions = [user, ...gameData.players]; // Include the new user and existing players for the list
+    const mentions = [user, ...gameData.players];
 
     await sock.sendMessage(jid, {
       text: `👋 ${this.formatUserMention(
-        user // Format for display
+        user
       )} bergabung ke game Hangman *${gameId}*!\n\nPemain:\n${this.formatPlayerList(
-        gameData // Format list for display
+        gameData
       )}`,
-      mentions: mentions, // Pass the actual JIDs for tagging
+      mentions: mentions,
     });
 
-    // Show current game status (updateGameStatus will handle its own mentions)
     await this.updateGameStatus(jid, gameId, sock);
   }
 
@@ -255,23 +250,21 @@ export class HangmanGame implements GameInterface {
       await sock.sendMessage(jid, {
         text: `Game Hangman *${gameId}* sepertinya sudah berakhir.`,
       });
-      sessionService.clearSession(jid, user); // Clean up lingering session link
+      sessionService.clearSession(jid, user);
       return;
     }
 
-    const leavingUserMention = this.formatUserMention(user); // Format for display
-    const leavingUserJid = user; // Keep original JID for mentions array
+    const leavingUserMention = this.formatUserMention(user);
+    const leavingUserJid = user;
 
-    // Remove player from game state
     gameData.players = gameData.players.filter((p) => p !== user);
     delete gameData.playerScores[user];
 
-    // Clear the user's session link
     sessionService.clearSession(jid, user);
 
     await sock.sendMessage(jid, {
       text: `👋 ${leavingUserMention} meninggalkan game Hangman *${gameId}*.`,
-      mentions: [leavingUserJid], // Mention the user who left
+      mentions: [leavingUserJid],
     });
 
     if (gameData.players.length === 0) {
@@ -286,19 +279,16 @@ export class HangmanGame implements GameInterface {
         const oldHostJid = user;
         gameData.hostUser = gameData.players[0];
         const newHostJid = gameData.hostUser;
-        hostChangeMentions = [oldHostJid, newHostJid]; // JIDs for mentions
+        hostChangeMentions = [oldHostJid, newHostJid];
         await sock.sendMessage(jid, {
           text: `Host ${this.formatUserMention(
-            oldHostJid // Format old host for display
-          )} keluar. Host baru adalah ${this.formatUserMention(
-            newHostJid // Format new host for display
-          )}.`,
-          mentions: hostChangeMentions, // Mention both old and new host
+            oldHostJid
+          )} keluar. Host baru adalah ${this.formatUserMention(newHostJid)}.`,
+          mentions: hostChangeMentions,
         });
       }
-      // Update the master game state
+
       activeHangmanGames.set(gameId, gameData);
-      // Notify remaining players (updateGameStatus handles its mentions)
       await this.updateGameStatus(jid, gameId, sock);
     }
   }
@@ -328,15 +318,15 @@ export class HangmanGame implements GameInterface {
 
     const finalWord = gameData.word;
     const playersToClear = [...gameData.players];
-    const hostJid = user; // JID for mentions
+    const hostJid = user;
 
     this.endGameCleanup(jid, gameId, playersToClear, sessionService);
 
     await sock.sendMessage(jid, {
       text: `🛑 Game Hangman *${gameId}* telah dihentikan oleh host (${this.formatUserMention(
-        hostJid // Format host for display
+        hostJid
       )}).\nKata yang benar: ${finalWord}`,
-      mentions: [hostJid], // Mention the host who stopped the game
+      mentions: [hostJid],
     });
   }
 
@@ -354,29 +344,26 @@ export class HangmanGame implements GameInterface {
       user
     );
 
-    // Validate game exists
     if (!gameData) {
       await sock.sendMessage(jid, {
         text: `Game Hangman *${gameId}* tidak ditemukan atau sudah berakhir.`,
       });
       if (userSessionLink?.data.gameId === gameId)
-        sessionService.clearSession(jid, user); // Clean invalid link
+        sessionService.clearSession(jid, user);
       return;
     }
 
-    // Validate user is part of this game
     if (!gameData.players.includes(user)) {
       await sock.sendMessage(jid, {
         text: `Kamu bukan bagian dari game Hangman *${gameId}*. Gunakan ${BotConfig.prefix}hangman join ${gameId}`,
       });
       return;
     }
-    // Ensure session link is correct, just in case
+
     if (!userSessionLink || userSessionLink.data.gameId !== gameId) {
       sessionService.setSession(jid, user, "hangman", { gameId });
     }
 
-    // Validate guess format
     if (!guess || guess.length !== 1 || !/^[a-zA-Z]$/.test(guess)) {
       await sock.sendMessage(jid, {
         text: `Tebakan tidak valid (${guess}). Harap masukkan satu huruf (A-Z) untuk game *${gameId}*.`,
@@ -393,11 +380,9 @@ export class HangmanGame implements GameInterface {
       return;
     }
 
-    // --- Process the guess ---
     gameData.guessedLetters.push(letter);
 
     if (gameData.word.includes(letter)) {
-      // Pass sessionService to the handler
       await this.handleCorrectGuess(
         jid,
         user,
@@ -407,7 +392,6 @@ export class HangmanGame implements GameInterface {
         sessionService
       );
     } else {
-      // Pass sessionService to the handler
       await this.handleWrongGuess(
         jid,
         user,
@@ -419,7 +403,6 @@ export class HangmanGame implements GameInterface {
     }
 
     // Update the master game state (important!)
-    // Check if game still exists before setting (it might have been cleaned up)
     if (activeHangmanGames.has(gameId)) {
       activeHangmanGames.set(gameId, gameData);
     }
@@ -437,7 +420,7 @@ export class HangmanGame implements GameInterface {
     let correctCount = 0;
     const currentGuess =
       gameData.guessedLetters[gameData.guessedLetters.length - 1];
-    const guesserJid = user; // JID for mentions
+    const guesserJid = user;
 
     for (let i = 0; i < gameData.word.length; i++) {
       const char = gameData.word[i];
@@ -445,7 +428,7 @@ export class HangmanGame implements GameInterface {
         char === currentGuess &&
         !gameData.maskedWord[i].includes(MASK_CHAR)
       ) {
-        // Already revealed, don't count points again (though it shouldn't happen with guessedLetters check)
+        // Already revealed, don't count points again
       } else if (char === currentGuess) {
         correctCount++;
       }
@@ -453,43 +436,40 @@ export class HangmanGame implements GameInterface {
       newMasked += gameData.guessedLetters.includes(char) ? char : MASK_CHAR;
     }
 
-    // Add points
     gameData.playerScores[user] =
       (gameData.playerScores[user] || 0) + correctCount;
     gameData.maskedWord = newMasked;
 
-    // Check for win condition
     if (!newMasked.includes(MASK_CHAR)) {
       const playersByScore = Object.entries(gameData.playerScores).sort(
         (a, b) => b[1] - a[1]
       );
       const winnerJid = playersByScore[0][0];
-      const scoreBoardText = this.formatScoreboard(gameData); // Formats display text
-      const allPlayerJids = gameData.players; // Get all JIDs for mentions in scoreboard
+      const scoreBoardText = this.formatScoreboard(gameData);
+      const allPlayerJids = gameData.players;
 
       await sock.sendMessage(jid, {
         text: `🎉 Game *${gameId}* Selesai! Kata "${
           gameData.word
         }" berhasil ditebak oleh ${this.formatUserMention(
-          guesserJid // Format guesser for display
+          guesserJid
         )}!\n\n📊 SKOR AKHIR:\n${scoreBoardText}\n\n🏆 Pemenang: ${this.formatUserMention(
-          winnerJid // Format winner for display
+          winnerJid
         )} dengan ${playersByScore[0][1]} poin!`,
-        mentions: [guesserJid, winnerJid, ...allPlayerJids], // Mention guesser, winner, and all players in scoreboard
+        mentions: [guesserJid, winnerJid, ...allPlayerJids],
       });
 
       this.endGameCleanup(jid, gameId, gameData.players, sessionService);
       return;
     }
 
-    // Announce correct guess
     await sock.sendMessage(jid, {
       text: `✅ ${this.formatUserMention(
-        guesserJid // Format guesser for display
+        guesserJid
       )} menebak huruf "${currentGuess}" dengan benar di game *${gameId}*! (+${correctCount} poin)`,
-      mentions: [guesserJid], // Mention the user who guessed correctly
+      mentions: [guesserJid],
     });
-    // updateGameStatus handles its own mentions
+
     await this.updateGameStatus(jid, gameId, sock);
   }
 
@@ -504,32 +484,30 @@ export class HangmanGame implements GameInterface {
     gameData.attemptsLeft--;
     const currentGuess =
       gameData.guessedLetters[gameData.guessedLetters.length - 1];
-    const guesserJid = user; // JID for mentions
+    const guesserJid = user;
 
-    // Check for lose condition
     if (gameData.attemptsLeft <= 0) {
-      const scoreBoardText = this.formatScoreboard(gameData); // Formats display text
-      const allPlayerJids = gameData.players; // Get all JIDs for mentions in scoreboard
+      const scoreBoardText = this.formatScoreboard(gameData);
+      const allPlayerJids = gameData.players;
 
       await sock.sendMessage(jid, {
         text: `😢 Game Over untuk game *${gameId}*! Kalian kehabisan kesempatan.\nKata yang benar: ${gameData.word}\n\n📊 SKOR AKHIR:\n${scoreBoardText}`,
-        mentions: allPlayerJids, // Mention all players in the final scoreboard
+        mentions: allPlayerJids,
       });
 
       this.endGameCleanup(jid, gameId, gameData.players, sessionService);
       return;
     }
 
-    // Announce wrong guess
     await sock.sendMessage(jid, {
       text: `❌ ${this.formatUserMention(
-        guesserJid // Format guesser for display
+        guesserJid
       )} menebak huruf "${currentGuess}" (salah) di game *${gameId}*. Kesempatan tersisa: ${
         gameData.attemptsLeft
       }`,
-      mentions: [guesserJid], // Mention the user who guessed incorrectly
+      mentions: [guesserJid],
     });
-    // updateGameStatus handles its own mentions
+
     await this.updateGameStatus(jid, gameId, sock);
   }
 
@@ -541,7 +519,7 @@ export class HangmanGame implements GameInterface {
       });
       return;
     }
-    await this.updateGameStatus(jid, gameId, sock); // Re-send the status message
+    await this.updateGameStatus(jid, gameId, sock);
   }
 
   private async updateGameStatus(
@@ -554,12 +532,11 @@ export class HangmanGame implements GameInterface {
       console.warn(
         `Attempted to update status for non-existent game: ${gameId}`
       );
-      return; // Game might have ended between processing and updating
+      return;
     }
 
-    // Collect all JIDs mentioned in the status (host + all players in scoreboard)
     const mentions = [gameData.hostUser, ...gameData.players];
-    // Remove duplicates just in case host is also in players list (should be)
+    // Remove duplicates just in case host is also in players list
     const uniqueMentions = Array.from(new Set(mentions));
 
     await sock.sendMessage(jid, {
@@ -572,19 +549,17 @@ export class HangmanGame implements GameInterface {
         `Huruf ditebak: ${gameData.guessedLetters.join(", ")}`,
         `Hint: ${gameData.hint}`,
         `\n👥 PEMAIN & SKOR:`,
-        this.formatScoreboard(gameData), // Formats display text
-        `Host: ${this.formatUserMention(gameData.hostUser)}`, // Formats display text
+        this.formatScoreboard(gameData),
+        `Host: ${this.formatUserMention(gameData.hostUser)}`,
         `\nTebak: ${BotConfig.prefix}hangman [huruf] atau ${BotConfig.prefix}hangman guess ${gameId} [huruf]`,
       ].join("\n"),
-      mentions: uniqueMentions, // Pass all relevant JIDs for tagging
+      mentions: uniqueMentions,
     });
   }
 
-  // --- Helper Methods ---
-
   private formatUserMention(jid: string): string {
     if (!jid || !jid.includes("@")) {
-      return jid; // Return original if format is unexpected
+      return jid;
     }
     return `@${jid.split("@")[0]}`;
   }
@@ -599,7 +574,7 @@ export class HangmanGame implements GameInterface {
     if (Object.keys(gameData.playerScores).length === 0)
       return "_Belum ada skor_";
     return Object.entries(gameData.playerScores)
-      .sort((a, b) => b[1] - a[1]) // Sort by score descending
+      .sort((a, b) => b[1] - a[1])
       .map(
         ([player, score]) =>
           `• ${this.formatUserMention(player)}: ${score} poin`
@@ -607,13 +582,6 @@ export class HangmanGame implements GameInterface {
       .join("\n");
   }
 
-  /**
-   * Cleans up the ended game state and associated player session links.
-   * @param jid Chat ID
-   * @param gameId The ID of the game to clean up
-   * @param players Array of player JIDs who were in the game
-   * @param sessionService The SessionService instance
-   */
   private endGameCleanup(
     jid: string,
     gameId: string,
@@ -622,7 +590,6 @@ export class HangmanGame implements GameInterface {
   ): void {
     console.log(`Cleaning up Hangman game ${gameId} in chat ${jid}...`);
 
-    // 1. Remove game state from the static map
     const deleted = activeHangmanGames.delete(gameId);
     if (deleted) {
       console.log(`Removed game state for ${gameId}.`);
@@ -632,7 +599,6 @@ export class HangmanGame implements GameInterface {
       );
     }
 
-    // 2. Clear session links for all players involved in *this specific game*
     for (const player of players) {
       try {
         const playerSession = sessionService.getSession<{ gameId: string }>(
