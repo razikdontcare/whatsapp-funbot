@@ -2,6 +2,9 @@
   "name": "whatsapp-funbot",
   "module": "src/index.ts",
   "type": "module",
+  "scripts": {
+    "dev": "nodemon"
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "nodemon": "^3.1.9"
@@ -10,6 +13,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "axios": "^1.8.4",
     "baileys": "^6.7.16",
     "qrcode-terminal": "^0.12.0"
   }
