@@ -24,6 +24,27 @@ export class SessionService {
     }
   }
 
+  getAllSessionsInChat<T>(jid: string): GameSession<T>[] {
+    try {
+      const userSessions = this.sessions.get(jid);
+      if (!userSessions) return [];
+
+      const result: GameSession<T>[] = [];
+      const now = Date.now();
+
+      userSessions.forEach((session) => {
+        if (now - session.timestamp <= 3600000) {
+          result.push(session as GameSession<T>);
+        }
+      });
+
+      return result;
+    } catch (error) {
+      console.error("Error getting all sessions in chat:", error);
+      return [];
+    }
+  }
+
   private checkSessionLimit(jid: string, user: string): boolean {
     const userSessions = this.sessions.get(jid);
     if (userSessions && userSessions.size >= BotConfig.maxSessions) {
