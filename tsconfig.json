@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    // Node.js environment settings
+    "lib": ["ES2022"],
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    // Basic options
+    "esModuleInterop": true,
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Output configuration
+    "outDir": "dist",
+    "sourceMap": true,
+    "declaration": true,
+
+    // Remove bundler-specific options
+    // "allowImportingTsExtensions": true,
+    // "verbatimModuleSyntax": true,
+    "noEmit": false,
+
+    // Best practices
+    "strict": true,
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true,
+
+    // Some stricter flags (disabled by default)
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noPropertyAccessFromIndexSignature": false
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
