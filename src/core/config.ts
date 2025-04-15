@@ -9,7 +9,7 @@ export const BotConfig = {
   maxSessions: 5, // Maksimal session per user
   sessionTimeout: 3600000, // Waktu timeout session dalam milidetik (1 jam)
   sessionName: "meowbot",
-  allowFromMe: false, // Izinkan hanya pesan dari pengirim yang sama
+  allowFromMe: false, // Izinkan bot untuk handle command dari dirinya sendiri
 
   // Pengaturan Game
   defaultGameHelp: "Ketikan {prefix}games untuk melihat daftar game.",
