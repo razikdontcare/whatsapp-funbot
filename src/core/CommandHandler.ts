@@ -1,9 +1,10 @@
 import { GameInterface } from "../games/GameInterface.js";
 import { SessionService } from "../services/SessionService.js";
 import { BotConfig } from "./config.js";
+import { WebSocketInfo } from "./types.js";
 
 import { HangmanGame } from "../games/HangmanGame.js";
-import { WebSocketInfo } from "./types.js";
+import { RockPaperScissorsGame } from "../games/RockPaperScissorsGame.js";
 
 export class CommandHandler {
   private games: Map<string, new () => GameInterface> = new Map();
@@ -15,6 +16,7 @@ export class CommandHandler {
 
   private registerGame() {
     this.games.set("hangman", HangmanGame);
+    this.games.set("rps", RockPaperScissorsGame);
   }
 
   isCommand(text: string): boolean {
@@ -96,6 +98,8 @@ export class CommandHandler {
     switch (gameName) {
       case "hangman":
         return "Game tebak kata. Tebak huruf untuk menemukan kata yang tersembunyi.";
+      case "rps":
+        return "Batu-Gunting-Kertas (vs AI/Multiplayer)";
       default:
         return "_Deskripsi tidak tersedia._";
     }
@@ -132,10 +136,15 @@ export class CommandHandler {
     const existingSession = this.sessionService.getSession(jid, user);
 
     if (existingSession && existingSession.game !== command) {
-      await sock.sendMessage(jid, {
-        text: `Kamu sedang dalam game ${existingSession.game}. Akhiri dulu dengan ${BotConfig.prefix}stop.`,
-      });
-      return;
+      // Special case: Allow RPS commands if the session is an RPS multiplayer link
+      if (command === "rps" && existingSession.game === "rps_link") {
+        // This is fine - let the RPS game handle its link sessions
+      } else {
+        await sock.sendMessage(jid, {
+          text: `Kamu sedang dalam game ${existingSession.game}. Akhiri dulu dengan ${BotConfig.prefix}stop.`,
+        });
+        return;
+      }
     }
 
     await game.handleCommand(args, jid, user, sock, this.sessionService);
