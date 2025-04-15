@@ -1,4 +1,3 @@
-import { makeWASocket } from "baileys";
 import { SessionService } from "../services/SessionService.js";
 import { WebSocketInfo } from "../core/types.js";
 
