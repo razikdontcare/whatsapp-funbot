@@ -1,4 +1,4 @@
-import { GameInterface } from "../games/GameInterface.js";
+import { CommandInterface } from "./CommandInterface.js";
 import { SessionService } from "../services/SessionService.js";
 import { BotConfig } from "./config.js";
 import { WebSocketInfo } from "./types.js";
@@ -7,7 +7,7 @@ import { HangmanGame } from "../games/HangmanGame.js";
 import { RockPaperScissorsGame } from "../games/RockPaperScissorsGame.js";
 
 export class CommandHandler {
-  private games: Map<string, new () => GameInterface> = new Map();
+  private games: Map<string, new () => CommandInterface> = new Map();
 
   constructor(private sessionService: SessionService) {
     this.registerGame();

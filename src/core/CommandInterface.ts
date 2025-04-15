@@ -1,7 +1,7 @@
 import { SessionService } from "../services/SessionService.js";
-import { WebSocketInfo } from "../core/types.js";
+import { WebSocketInfo } from "./types.js";
 
-export interface GameInterface {
+export interface CommandInterface {
   handleCommand(
     args: string[],
     jid: string,

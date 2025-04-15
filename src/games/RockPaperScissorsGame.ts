@@ -1,7 +1,7 @@
-import { GameInterface } from "./GameInterface.js";
+import { CommandInterface } from "../core/CommandInterface.js";
 import { SessionService } from "../services/SessionService.js";
 import { BotConfig } from "../core/config.js";
-import { WebSocketInfo, GameSession } from "../core/types.js";
+import { WebSocketInfo, Session } from "../core/types.js";
 
 type InputRPSChoice =
   | "rock"
@@ -32,7 +32,7 @@ const MULTIPLAYER_SESSION_KEY = "rps_multiplayer_game";
 // Key for the link session stored in a player's DM session map (using user JID as key)
 const LINK_SESSION_KEY = "rps";
 
-export class RockPaperScissorsGame implements GameInterface {
+export class RockPaperScissorsGame implements CommandInterface {
   private readonly choices: InputRPSChoice[] = [
     "rock",
     "paper",
@@ -339,7 +339,7 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
     user: string,
     sock: WebSocketInfo,
     sessionService: SessionService,
-    session: GameSession<RPSSession>
+    session: Session<RPSSession>
   ) {
     if (user !== session.data.player1) {
       await sock.sendMessage(jid, { text: "Ini bukan game AI milikmu." });
@@ -537,15 +537,17 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
     }
 
     let groupJid: string | undefined;
-    let gameSession: GameSession<RPSSession> | null = null;
+    let gameSession: Session<RPSSession> | null = null;
 
     const linkSession = sessionService.getSession<RPSLinkSession>(user, user);
     if (linkSession && linkSession.game === LINK_SESSION_KEY) {
       groupJid = linkSession.data.groupJid;
-      gameSession = sessionService.getSession<RPSSession>(
-        groupJid,
-        MULTIPLAYER_SESSION_KEY
-      );
+      if (groupJid) {
+        gameSession = sessionService.getSession<RPSSession>(
+          groupJid,
+          MULTIPLAYER_SESSION_KEY
+        );
+      }
     } else if (isGroup) {
       gameSession = sessionService.getSession<RPSSession>(
         jid,

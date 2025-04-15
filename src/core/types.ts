@@ -1,13 +1,6 @@
 import { makeWASocket } from "baileys";
 
-export interface GameCommand {
-  name: string;
-  description: string;
-  aliases?: string[];
-  usage?: string;
-}
-
-export interface GameSession<T = any> {
+export interface Session<T = any> {
   game: string;
   data: T;
   timestamp: number;

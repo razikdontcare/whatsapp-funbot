@@ -1,10 +1,10 @@
 import { BotConfig } from "../core/config.js";
-import { GameSession } from "../core/types.js";
+import { Session } from "../core/types.js";
 
 export class SessionService {
-  private sessions: Map<string, Map<string, GameSession>> = new Map();
+  private sessions: Map<string, Map<string, Session>> = new Map();
 
-  getSession<T>(jid: string, user: string): GameSession<T> | null {
+  getSession<T>(jid: string, user: string): Session<T> | null {
     try {
       const userSessions = this.sessions.get(jid);
       if (!userSessions) return null;
@@ -24,17 +24,17 @@ export class SessionService {
     }
   }
 
-  getAllSessionsInChat<T>(jid: string): GameSession<T>[] {
+  getAllSessionsInChat<T>(jid: string): Session<T>[] {
     try {
       const userSessions = this.sessions.get(jid);
       if (!userSessions) return [];
 
-      const result: GameSession<T>[] = [];
+      const result: Session<T>[] = [];
       const now = Date.now();
 
       userSessions.forEach((session) => {
         if (now - session.timestamp <= 3600000) {
-          result.push(session as GameSession<T>);
+          result.push(session as Session<T>);
         }
       });
 

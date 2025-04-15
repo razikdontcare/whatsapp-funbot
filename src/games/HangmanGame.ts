@@ -1,6 +1,6 @@
 import { BotConfig } from "../core/config.js";
 import { SessionService } from "../services/SessionService.js";
-import { GameInterface } from "./GameInterface.js";
+import { CommandInterface } from "../core/CommandInterface.js";
 import { WebSocketInfo } from "../core/types.js";
 import { getRandomKBBI } from "../utils/randomKBBI.js";
 import { randomBytes } from "crypto";
@@ -27,7 +27,7 @@ function generateGameId(): string {
   return randomBytes(3).toString("hex");
 }
 
-export class HangmanGame implements GameInterface {
+export class HangmanGame implements CommandInterface {
   async handleCommand(
     args: string[],
     jid: string,
