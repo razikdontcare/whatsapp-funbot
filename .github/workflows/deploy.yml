@@ -58,7 +58,7 @@ jobs:
           port: ${{ secrets.VPS_PORT || '22' }}
           script: |
             # Login to GitHub Container Registry
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
             # Extract version from GitHub ref
             VERSION=${GITHUB_REF#refs/tags/}
