@@ -24,7 +24,7 @@ export class FufufafaComments implements CommandInterface {
     try {
       let fufufafaComments;
 
-      if (args.length > 0 && args[0] !== "imgonly") {
+      if (args.length > 0 && args[0] !== "imgonly" && args[0] !== "textonly") {
         fufufafaComments = await getFufufafaCommentById(parseInt(args[0]));
       } else {
         fufufafaComments = await getRandomFufufafaComment();
@@ -33,6 +33,7 @@ export class FufufafaComments implements CommandInterface {
       const imageBuffer = await axios.get(fufufafaComments.image_url, {
         responseType: "arraybuffer",
         timeout: 5000,
+        family: 4,
       });
 
       const image = await sharp(imageBuffer.data)
@@ -47,22 +48,23 @@ export class FufufafaComments implements CommandInterface {
         fufufafaComments.id
       } untuk mendapatkan gambar ini kembali`;
 
-      if (args.length > 0 && args.includes("imgonly")) {
-        if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
-          const botId = sock.authState.creds.me?.id.split(":")[0] || null;
-          const quotedMessage = msg.message?.extendedTextMessage?.contextInfo;
-          const quoted = {
-            key: {
-              remoteJid: jid,
-              fromMe:
-                quotedMessage.participant === `${botId}@s.whatsapp.net`
-                  ? true
-                  : false,
-              id: quotedMessage.stanzaId,
-              participant: quotedMessage.participant,
-            },
-            message: quotedMessage.quotedMessage,
-          };
+      if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
+        const quotedMessage = msg.message?.extendedTextMessage?.contextInfo;
+        const botId = sock.authState.creds.me?.id.split(":")[0] || null;
+        const quoted = {
+          key: {
+            remoteJid: jid,
+            fromMe:
+              quotedMessage.participant === `${botId}@s.whatsapp.net`
+                ? true
+                : false,
+            id: quotedMessage.stanzaId,
+            participant: quotedMessage.participant,
+          },
+          message: quotedMessage.quotedMessage,
+        };
+
+        if (args.length > 0 && args.includes("imgonly")) {
           await sock.sendMessage(
             jid,
             {
@@ -74,20 +76,47 @@ export class FufufafaComments implements CommandInterface {
           );
 
           return;
+        } else if (args.length > 0 && args.includes("textonly")) {
+          await sock.sendMessage(
+            jid,
+            {
+              text: fufufafaComments.content,
+            },
+            {
+              quoted,
+            }
+          );
+
+          return;
+        } else {
+          await sock.sendMessage(
+            jid,
+            {
+              image: Buffer.from(image),
+              caption,
+            },
+            { quoted }
+          );
         }
-        await sock.sendMessage(jid, {
-          image: Buffer.from(image),
-        });
-
-        return;
+      } else {
+        if (args.length > 0 && args.includes("imgonly")) {
+          await sock.sendMessage(jid, {
+            image: Buffer.from(image),
+          });
+          return;
+        } else if (args.length > 0 && args.includes("textonly")) {
+          await sock.sendMessage(jid, {
+            text: fufufafaComments.content,
+          });
+          return;
+        } else {
+          await sock.sendMessage(jid, {
+            image: Buffer.from(image),
+            caption,
+          });
+          return;
+        }
       }
-
-      await sock.sendMessage(jid, {
-        image: Buffer.from(image),
-        caption,
-      });
-
-      return;
     } catch (error) {
       log.error("Error handling command:", error);
       await sock.sendMessage(jid, {

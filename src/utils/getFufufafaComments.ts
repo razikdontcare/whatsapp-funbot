@@ -12,7 +12,11 @@ export type FufufafaCommentsResponse = {
 export async function getRandomFufufafaComment(): Promise<FufufafaCommentsResponse> {
   try {
     const response = await axios.get(
-      "https://fufufafapi.vanirvan.my.id/api/random"
+      "https://fufufafapi.vanirvan.my.id/api/random",
+      {
+        timeout: 5000,
+        family: 4,
+      }
     );
     const data = response.data;
 
@@ -36,7 +40,11 @@ export async function getRandomFufufafaComment(): Promise<FufufafaCommentsRespon
 export async function getFufufafaCommentById(id: number) {
   try {
     const response = await axios.get(
-      `https://fufufafapi.vanirvan.my.id/api/${id}`
+      `https://fufufafapi.vanirvan.my.id/api/${id}`,
+      {
+        timeout: 5000,
+        family: 4,
+      }
     );
     const data = response.data;
 
