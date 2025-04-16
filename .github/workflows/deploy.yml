@@ -1,0 +1,80 @@
+name: Deploy on Release
+
+on:
+  push:
+    tags:
+      - "v*" # This will trigger the workflow on any tag that starts with 'v'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=tag
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            MONGO_URI=${{ secrets.MONGO_URI }}
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          script: |
+            # Login to GitHub Container Registry
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            # Extract version from GitHub ref
+            VERSION=${GITHUB_REF#refs/tags/}
+
+            # Pull the latest image
+            docker pull ghcr.io/${{ github.repository }}:${VERSION}
+
+            # Stop and remove the existing container if it exists
+            docker stop whatsapp-funbot || true
+            docker rm whatsapp-funbot || true
+
+            # Run the new container with appropriate environment variables
+            docker run -d --name whatsapp-funbot \
+              --restart unless-stopped \
+              -e MONGO_URI="${{ secrets.MONGO_URI }}" \
+              ghcr.io/${{ github.repository }}:${VERSION}
+
+            # Clean up old images
+            docker image prune -af
