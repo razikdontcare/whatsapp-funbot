@@ -4,6 +4,7 @@ import { CommandInterface } from "../core/CommandInterface.js";
 import { WebSocketInfo } from "../core/types.js";
 import { getRandomKBBI } from "../utils/randomKBBI.js";
 import { randomBytes } from "crypto";
+import { proto } from "baileys";
 
 const MAX_ATTEMPTS = 6;
 const MASK_CHAR = "#";
@@ -33,7 +34,8 @@ export class HangmanGame implements CommandInterface {
     jid: string,
     user: string,
     sock: WebSocketInfo,
-    sessionService: SessionService
+    sessionService: SessionService,
+    msg: proto.IWebMessageInfo
   ): Promise<void> {
     const command = args[0]?.toLowerCase();
     const userSessionLink = sessionService.getSession<{ gameId: string }>(

@@ -2,6 +2,7 @@ import { CommandInterface } from "../core/CommandInterface.js";
 import { SessionService } from "../services/SessionService.js";
 import { BotConfig } from "../core/config.js";
 import { WebSocketInfo, Session } from "../core/types.js";
+import { proto } from "baileys";
 
 type InputRPSChoice =
   | "rock"
@@ -63,7 +64,8 @@ export class RockPaperScissorsGame implements CommandInterface {
     jid: string,
     user: string,
     sock: WebSocketInfo,
-    sessionService: SessionService
+    sessionService: SessionService,
+    msg: proto.IWebMessageInfo
   ): Promise<void> {
     try {
       const isGroup = jid.endsWith("@g.us");

@@ -1,5 +1,9 @@
 import axios from "axios";
-import { KBBIResponse } from "../core/types.js";
+
+export type KBBIResponse = {
+  lemma: string;
+  definition: string;
+};
 
 export async function getRandomKBBI(): Promise<KBBIResponse> {
   try {

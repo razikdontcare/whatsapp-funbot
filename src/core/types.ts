@@ -7,8 +7,3 @@ export interface Session<T = any> {
 }
 
 export type WebSocketInfo = ReturnType<typeof makeWASocket>;
-
-export interface KBBIResponse {
-  lemma: string;
-  definition: string;
-}

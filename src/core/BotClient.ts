@@ -4,6 +4,10 @@ import { SessionService } from "../services/SessionService.js";
 import { BotConfig } from "./config.js";
 import { WebSocketInfo } from "./types.js";
 import { Boom } from "@hapi/boom";
+import MAIN_LOGGER from "baileys/lib/Utils/logger.js";
+
+const logger = MAIN_LOGGER.default.child({});
+logger.level = "silent";
 
 export class BotClient {
   private sock: WebSocketInfo | null = null;
@@ -24,6 +28,7 @@ export class BotClient {
     this.sock = makeWASocket({
       auth: state,
       printQRInTerminal: true,
+      logger,
     });
 
     this.botId = this.sock.authState.creds.me?.id.split(":")[0] || null;
@@ -74,14 +79,21 @@ export class BotClient {
               BotConfig.prefix + commandText,
               jid,
               user,
-              this.sock!
+              this.sock!,
+              m
             );
           }
           return;
         }
 
         if (this.commandHandler.isCommand(text)) {
-          await this.commandHandler.handleCommand(text, jid, user, this.sock!);
+          await this.commandHandler.handleCommand(
+            text,
+            jid,
+            user,
+            this.sock!,
+            m
+          );
         }
       } catch (error) {
         console.error("Error handling message: ", error);

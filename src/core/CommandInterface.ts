@@ -1,3 +1,4 @@
+import { proto } from "baileys";
 import { SessionService } from "../services/SessionService.js";
 import { WebSocketInfo } from "./types.js";
 
@@ -7,6 +8,7 @@ export interface CommandInterface {
     jid: string,
     user: string,
     sock: WebSocketInfo,
-    sessionService: SessionService
+    sessionService: SessionService,
+    msg: proto.IWebMessageInfo
   ): Promise<void>;
 }

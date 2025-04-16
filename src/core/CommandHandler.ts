@@ -5,18 +5,26 @@ import { WebSocketInfo } from "./types.js";
 
 import { HangmanGame } from "../games/HangmanGame.js";
 import { RockPaperScissorsGame } from "../games/RockPaperScissorsGame.js";
+import { FufufafaComments } from "../general/FufufafaComments.js";
+import { proto } from "baileys";
 
 export class CommandHandler {
   private games: Map<string, new () => CommandInterface> = new Map();
+  private general: Map<string, new () => CommandInterface> = new Map();
 
   constructor(private sessionService: SessionService) {
     this.registerGame();
+    this.registerGeneralCommand();
     setInterval(() => this.sessionService.cleanupExpiredSessions(), 1800000); // 30 minutes
   }
 
   private registerGame() {
     this.games.set("hangman", HangmanGame);
     this.games.set("rps", RockPaperScissorsGame);
+  }
+
+  private registerGeneralCommand() {
+    this.general.set("fufufafa", FufufafaComments);
   }
 
   isCommand(text: string): boolean {
@@ -51,7 +59,8 @@ export class CommandHandler {
     text: string,
     jid: string,
     user: string,
-    sock: WebSocketInfo
+    sock: WebSocketInfo,
+    msg: proto.IWebMessageInfo
   ): Promise<void> {
     try {
       const { command, args } = this.extractCommand(text);
@@ -67,7 +76,9 @@ export class CommandHandler {
       }
 
       if (this.games.has(command)) {
-        await this.handleGameCommand(command, args, jid, user, sock);
+        await this.handleGameCommand(command, args, jid, user, sock, msg);
+      } else if (this.general.has(command)) {
+        await this.handleGeneralCommand(command, args, jid, user, sock, msg);
       } else {
         await sock.sendMessage(jid, {
           text: BotConfig.unknownCommandResponse.replace(
@@ -123,12 +134,34 @@ export class CommandHandler {
     }
   }
 
+  private async handleGeneralCommand(
+    command: string,
+    args: string[],
+    jid: string,
+    user: string,
+    sock: WebSocketInfo,
+    msg: proto.IWebMessageInfo
+  ) {
+    const GeneralClass = this.general.get(command)!;
+    const general = new GeneralClass();
+
+    await general.handleCommand(
+      args,
+      jid,
+      user,
+      sock,
+      this.sessionService,
+      msg
+    );
+  }
+
   private async handleGameCommand(
     command: string,
     args: string[],
     jid: string,
     user: string,
-    sock: WebSocketInfo
+    sock: WebSocketInfo,
+    msg: proto.IWebMessageInfo
   ) {
     const GameClass = this.games.get(command)!;
     const game = new GameClass();
@@ -147,6 +180,6 @@ export class CommandHandler {
       }
     }
 
-    await game.handleCommand(args, jid, user, sock, this.sessionService);
+    await game.handleCommand(args, jid, user, sock, this.sessionService, msg);
   }
 }
