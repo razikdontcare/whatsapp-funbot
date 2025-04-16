@@ -49,6 +49,10 @@ jobs:
           build-args: |
             MONGO_URI=${{ secrets.MONGO_URI }}
 
+      - name: Get the version
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
       - name: Deploy to VPS
         uses: appleboy/ssh-action@master
         with:
@@ -56,25 +60,30 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || '22' }}
+          envs: GITHUB_REPOSITORY,VERSION
+          env:
+            GITHUB_REPOSITORY: ${{ github.repository }}
+            VERSION: ${{ steps.get_version.outputs.VERSION }}
           script: |
             # Login to GitHub Container Registry
             echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # Extract version from GitHub ref
-            VERSION=${GITHUB_REF#refs/tags/}
+            # Define image
+            IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY}:${VERSION}"
+            echo "Using image: ${IMAGE_NAME}"
 
             # Pull the latest image
-            docker pull ghcr.io/${{ github.repository }}:${VERSION}
+            docker pull "${IMAGE_NAME}"
 
             # Stop and remove the existing container if it exists
-            docker stop whatsapp-funbot || true
-            docker rm whatsapp-funbot || true
+            docker stop whatsapp-funbot 2>/dev/null || true
+            docker rm whatsapp-funbot 2>/dev/null || true
 
             # Run the new container with appropriate environment variables
             docker run -d --name whatsapp-funbot \
               --restart unless-stopped \
               -e MONGO_URI="${{ secrets.MONGO_URI }}" \
-              ghcr.io/${{ github.repository }}:${VERSION}
+              "${IMAGE_NAME}"
 
             # Clean up old images
             docker image prune -af
