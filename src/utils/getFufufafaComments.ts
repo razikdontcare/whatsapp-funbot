@@ -1,4 +1,5 @@
 import axios from "axios";
+import { log } from "../core/config.js";
 
 export type FufufafaCommentsResponse = {
   id: number;
@@ -27,7 +28,7 @@ export async function getRandomFufufafaComment(): Promise<FufufafaCommentsRespon
       throw new Error("No data found");
     }
   } catch (error) {
-    console.error("Error fetching random Fufufafa comment:", error);
+    log.error("Error fetching random Fufufafa comment:", error);
     throw error;
   }
 }
@@ -51,7 +52,7 @@ export async function getFufufafaCommentById(id: number) {
       throw new Error("No data found");
     }
   } catch (error) {
-    console.error("Error fetching Fufufafa comment by ID:", error);
+    log.error("Error fetching Fufufafa comment by ID:", error);
     throw error;
   }
 }

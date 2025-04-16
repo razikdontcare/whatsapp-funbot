@@ -4,6 +4,7 @@ import { SessionService } from "../services/SessionService.js";
 import { BotConfig } from "./config.js";
 import { WebSocketInfo } from "./types.js";
 import { Boom } from "@hapi/boom";
+import { log } from "./config.js";
 import MAIN_LOGGER from "baileys/lib/Utils/logger.js";
 
 const logger = MAIN_LOGGER.default.child({});
@@ -39,19 +40,19 @@ export class BotClient {
         const shouldReconnect =
           (lastDisconnect?.error as Boom)?.output?.statusCode !==
           DisconnectReason.loggedOut;
-        console.log(
+        log.warn(
           "Connection closed due to ",
-          lastDisconnect?.error,
+          lastDisconnect?.error?.message,
           ", reconnecting ",
           shouldReconnect
         );
         if (shouldReconnect) this.start();
       } else if (connection === "open") {
-        console.log(
-          `Connected to WhatsApp as ${this.botId} with session name ${BotConfig.sessionName}\n` +
-            `Bot Name: ${BotConfig.name}\n` +
-            `Prefix: ${BotConfig.prefix}\n`
+        log.info(
+          `Connected to WhatsApp as ${this.botId} with session name ${BotConfig.sessionName}`
         );
+        log.info(`Bot Name: ${BotConfig.name}`);
+        log.info(`Prefix: ${BotConfig.prefix}`);
       }
     });
 
@@ -96,7 +97,7 @@ export class BotClient {
           );
         }
       } catch (error) {
-        console.error("Error handling message: ", error);
+        log.error("Error handling message: ", error);
       }
     });
   }

@@ -1,4 +1,4 @@
-import { BotConfig } from "../core/config.js";
+import { BotConfig, log } from "../core/config.js";
 import { SessionService } from "../services/SessionService.js";
 import { CommandInterface } from "../core/CommandInterface.js";
 import { WebSocketInfo } from "../core/types.js";
@@ -531,9 +531,7 @@ export class HangmanGame implements CommandInterface {
   ) {
     const gameData = activeHangmanGames.get(gameId);
     if (!gameData) {
-      console.warn(
-        `Attempted to update status for non-existent game: ${gameId}`
-      );
+      log.warn(`Attempted to update status for non-existent game: ${gameId}`);
       return;
     }
 
@@ -590,13 +588,13 @@ export class HangmanGame implements CommandInterface {
     players: string[],
     sessionService: SessionService
   ): void {
-    console.log(`Cleaning up Hangman game ${gameId} in chat ${jid}...`);
+    log.info(`Cleaning up Hangman game ${gameId} in chat ${jid}...`);
 
     const deleted = activeHangmanGames.delete(gameId);
     if (deleted) {
-      console.log(`Removed game state for ${gameId}.`);
+      log.info(`Removed game state for ${gameId}.`);
     } else {
-      console.warn(
+      log.warn(
         `Attempted to cleanup game ${gameId}, but it was not found in activeHangmanGames.`
       );
     }
@@ -615,25 +613,25 @@ export class HangmanGame implements CommandInterface {
           playerSession.data.gameId === gameId
         ) {
           sessionService.clearSession(jid, player);
-          console.log(
+          log.info(
             `Cleared session link for player ${player} for game ${gameId}.`
           );
         } else if (playerSession) {
-          console.log(
+          log.info(
             `Player ${player} has a session link, but not for the ended game ${gameId} (link: ${playerSession.game}/${playerSession.data?.gameId}). Skipping cleanup for this player.`
           );
         } else {
-          console.log(
+          log.info(
             `Player ${player} had no active session link found. Skipping cleanup for this player.`
           );
         }
       } catch (error) {
-        console.error(
+        log.error(
           `Error cleaning up session link for player ${player} in game ${gameId}:`,
           error
         );
       }
     }
-    console.log(`Cleanup finished for game ${gameId}.`);
+    log.info(`Cleanup finished for game ${gameId}.`);
   }
 }

@@ -1,6 +1,6 @@
 import axios from "axios";
 import { CommandInterface } from "../core/CommandInterface.js";
-import { BotConfig } from "../core/config.js";
+import { BotConfig, log } from "../core/config.js";
 import { WebSocketInfo } from "../core/types.js";
 import { SessionService } from "../services/SessionService.js";
 import {
@@ -89,7 +89,7 @@ export class FufufafaComments implements CommandInterface {
 
       return;
     } catch (error) {
-      console.error("Error handling command:", error);
+      log.error("Error handling command:", error);
       await sock.sendMessage(jid, {
         text: "Terjadi kesalahan saat memproses perintah. Silakan coba lagi.",
       });

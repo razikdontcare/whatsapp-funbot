@@ -1,6 +1,6 @@
 import { CommandInterface } from "./CommandInterface.js";
 import { SessionService } from "../services/SessionService.js";
-import { BotConfig } from "./config.js";
+import { BotConfig, log } from "./config.js";
 import { WebSocketInfo } from "./types.js";
 
 import { HangmanGame } from "../games/HangmanGame.js";
@@ -88,7 +88,7 @@ export class CommandHandler {
         });
       }
     } catch (error) {
-      console.error(`Error handling command: ${error}`);
+      log.error(`Error handling command: ${error}`);
       await sock.sendMessage(jid, {
         text: "Terjadi error saat memproses perintah. Silahkan coba lagi.",
       });

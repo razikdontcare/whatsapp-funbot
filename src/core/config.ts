@@ -1,3 +1,5 @@
+import { Logger } from "../utils/logger.js";
+
 export const BotConfig = {
   // Pengaturan Prefix
   prefix: "!",
@@ -16,3 +18,9 @@ export const BotConfig = {
   unknownCommandResponse:
     "Perintah tidak dikenali. Ketik {prefix}games untuk bantuan.",
 };
+
+export const log = new Logger({
+  level: "debug",
+  displayTimestamp: true,
+  displayLevel: true,
+});

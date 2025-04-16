@@ -1,4 +1,5 @@
 import axios from "axios";
+import { log } from "../core/config.js";
 
 export type KBBIResponse = {
   lemma: string;
@@ -27,7 +28,7 @@ export async function getRandomKBBI(): Promise<KBBIResponse> {
       throw new Error("No data found");
     }
   } catch (error) {
-    console.error("Error fetching random KBBI word:", error);
+    log.error("Error fetching random KBBI word:", error);
     throw error;
   }
 }

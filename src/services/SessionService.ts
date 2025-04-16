@@ -1,4 +1,4 @@
-import { BotConfig } from "../core/config.js";
+import { BotConfig, log } from "../core/config.js";
 import { Session } from "../core/types.js";
 
 export class SessionService {
@@ -19,7 +19,7 @@ export class SessionService {
 
       return session;
     } catch (error) {
-      console.error("Error getting session:", error);
+      log.error("Error getting session:", error);
       return null;
     }
   }
@@ -40,7 +40,7 @@ export class SessionService {
 
       return result;
     } catch (error) {
-      console.error("Error getting all sessions in chat:", error);
+      log.error("Error getting all sessions in chat:", error);
       return [];
     }
   }
@@ -72,7 +72,7 @@ export class SessionService {
       });
       return true;
     } catch (error) {
-      console.error("Error setting session:", error);
+      log.error("Error setting session:", error);
       return false;
     }
   }
@@ -88,7 +88,7 @@ export class SessionService {
         }
       }
     } catch (error) {
-      console.error("Error clearing session:", error);
+      log.error("Error clearing session:", error);
     }
   }
 

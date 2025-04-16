@@ -1,6 +1,6 @@
 import { CommandInterface } from "../core/CommandInterface.js";
 import { SessionService } from "../services/SessionService.js";
-import { BotConfig } from "../core/config.js";
+import { BotConfig, log } from "../core/config.js";
 import { WebSocketInfo, Session } from "../core/types.js";
 import { proto } from "baileys";
 
@@ -111,7 +111,7 @@ export class RockPaperScissorsGame implements CommandInterface {
         });
       }
     } catch (error) {
-      console.error("Error in RPS game:", error);
+      log.error("Error in RPS game:", error);
       await sock.sendMessage(jid, {
         text: "Terjadi error dalam game RPS. Silakan coba lagi.",
       });
@@ -417,7 +417,7 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
               groupJid: groupJid,
             })
           ) {
-            console.error(
+            log.error(
               `Failed to set link session for potential Player 2: ${user} in group ${groupJid}`
             );
             await sock.sendMessage(user, {
@@ -458,7 +458,7 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
         rpsSession
       )
     ) {
-      console.error(`Failed to update main game session for group ${groupJid}`);
+      log.error(`Failed to update main game session for group ${groupJid}`);
       await sock.sendMessage(user, {
         text: "Terjadi masalah saat menyimpan pilihanmu. Coba lagi.",
       });
@@ -486,7 +486,7 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
       !session.player1 ||
       !session.player2
     ) {
-      console.error(
+      log.error(
         "Incomplete session data for announcing multiplayer result:",
         session
       );
