@@ -2,7 +2,7 @@
 FROM node:20-alpine AS builder
 
 # Install build dependencies
-RUN apk add --no-cache curl build-base python3 vips-dev
+RUN apk add --no-cache curl build-base python3 vips-dev bash
 
 # Install Bun
 RUN curl -fsSL https://bun.sh/install | bash \
