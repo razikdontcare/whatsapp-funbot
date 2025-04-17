@@ -1,9 +1,4 @@
-import {
-  makeWASocket,
-  DisconnectReason,
-  useMultiFileAuthState,
-  AuthenticationState,
-} from "baileys";
+import { makeWASocket, DisconnectReason, AuthenticationState } from "baileys";
 import { CommandHandler } from "./CommandHandler.js";
 import { SessionService } from "../services/SessionService.js";
 import { BotConfig } from "./config.js";
@@ -58,7 +53,7 @@ export class BotClient {
             : undefined,
           process.env.NODE_ENV !== "production" ? "baileys_dev_" : undefined
         );
-        const { state, saveCreds, removeCreds, close } = this.authState;
+        const { state } = this.authState;
 
         // Create a new socket connection
         this.sock = makeWASocket({
