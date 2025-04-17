@@ -11,6 +11,7 @@ import { proto } from "baileys";
 export class CommandHandler {
   private games: Map<string, new () => CommandInterface> = new Map();
   private general: Map<string, new () => CommandInterface> = new Map();
+  private aliases: Map<string, string> = new Map();
 
   constructor(private sessionService: SessionService) {
     this.registerGame();
@@ -20,11 +21,17 @@ export class CommandHandler {
 
   private registerGame() {
     this.games.set("hangman", HangmanGame);
+    this.setAlias("hm", "hangman");
+
     this.games.set("rps", RockPaperScissorsGame);
   }
 
   private registerGeneralCommand() {
     this.general.set("fufufafa", FufufafaComments);
+  }
+
+  private setAlias(alias: string, command: string): void {
+    this.aliases.set(alias.toLowerCase(), command.toLowerCase());
   }
 
   isCommand(text: string): boolean {
@@ -75,10 +82,22 @@ export class CommandHandler {
         return;
       }
 
-      if (this.games.has(command)) {
-        await this.handleGameCommand(command, args, jid, user, sock, msg);
-      } else if (this.general.has(command)) {
-        await this.handleGeneralCommand(command, args, jid, user, sock, msg);
+      // Check if the command is an alias, and if so, get the actual command
+      const actualCommand = this.aliases.has(command)
+        ? this.aliases.get(command)!
+        : command;
+
+      if (this.games.has(actualCommand)) {
+        await this.handleGameCommand(actualCommand, args, jid, user, sock, msg);
+      } else if (this.general.has(actualCommand)) {
+        await this.handleGeneralCommand(
+          actualCommand,
+          args,
+          jid,
+          user,
+          sock,
+          msg
+        );
       } else {
         await sock.sendMessage(jid, {
           text: BotConfig.unknownCommandResponse.replace(
