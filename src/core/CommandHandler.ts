@@ -42,7 +42,7 @@ export class CommandHandler {
 
     this.registerCommand({
       name: "rps",
-      aliases: ["batu", "gunting", "kertas", "rockpaperscissors"],
+      aliases: [],
       description: "Batu-Gunting-Kertas (vs AI/Multiplayer)",
       category: "game",
       commandClass: RockPaperScissorsGame,
@@ -51,7 +51,8 @@ export class CommandHandler {
 
     this.registerCommand({
       name: "fufufafa",
-      description: "Komentar lucu",
+      description:
+        "Komentar random dari akun Kaskus Fufufafa. (Total 699 komentar)",
       category: "general",
       commandClass: FufufafaComments,
       cooldown: 10000,
@@ -499,6 +500,20 @@ export class CommandHandler {
           break;
         default:
           helpText += `Gunakan ${BotConfig.prefix}${commandInfo.name} start untuk memulai.`;
+      }
+    } else if (commandInfo.category === "general") {
+      helpText += `*Cara penggunaan:*\n`;
+
+      switch (commandInfo.name) {
+        case "fufufafa":
+          helpText +=
+            `1. Ketik ${BotConfig.prefix}fufufafa untuk mendapatkan komentar random dari akun Kaskus Fufufafa\n` +
+            `2. Gunakan ${BotConfig.prefix}fufufafa [id] untuk mendapatkan komentar tertentu\n` +
+            `3. Gunakan ${BotConfig.prefix}fufufafa [id] imgonly untuk mendapatkan gambar saja\n` +
+            `4. Gunakan ${BotConfig.prefix}fufufafa [id] textonly untuk mendapatkan teks saja\n`;
+          break;
+        default:
+          helpText += `Gunakan ${BotConfig.prefix}${commandInfo.name} untuk menjalankan perintah ini.`;
       }
     } else {
       helpText += `Gunakan ${BotConfig.prefix}${commandInfo.name} untuk menjalankan perintah ini.`;
