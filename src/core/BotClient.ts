@@ -51,7 +51,10 @@ export class BotClient {
       // Connect to MongoDB and initialize auth state
       log.info("Initializing WhatsApp connection...");
       try {
-        this.authState = await useMongoDBAuthState(process.env.MONGO_URI!);
+        this.authState = await useMongoDBAuthState(
+          process.env.MONGO_URI!,
+          process.env.NODE_ENV !== "production" ? "baileys_auth_dev" : undefined
+        );
         const { state, saveCreds, removeCreds, close } = this.authState;
 
         // Create a new socket connection
