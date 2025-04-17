@@ -2,36 +2,104 @@ import { CommandInterface } from "./CommandInterface.js";
 import { SessionService } from "../services/SessionService.js";
 import { BotConfig, log } from "./config.js";
 import { WebSocketInfo } from "./types.js";
+import { CooldownManager } from "./CooldownManager.js";
 
 import { HangmanGame } from "../games/HangmanGame.js";
 import { RockPaperScissorsGame } from "../games/RockPaperScissorsGame.js";
 import { FufufafaComments } from "../general/FufufafaComments.js";
 import { proto } from "baileys";
 
+export interface CommandInfo {
+  name: string;
+  aliases?: string[];
+  description: string;
+  category: "game" | "general" | "admin" | "utility";
+  commandClass: new () => CommandInterface;
+  cooldown?: number; // Cooldown in milliseconds
+  maxUses?: number; // Maximum uses before cooldown triggers
+}
+
 export class CommandHandler {
-  private games: Map<string, new () => CommandInterface> = new Map();
-  private general: Map<string, new () => CommandInterface> = new Map();
+  private commands: Map<string, CommandInfo> = new Map();
   private aliases: Map<string, string> = new Map();
+  private cooldownManager: CooldownManager = new CooldownManager();
 
   constructor(private sessionService: SessionService) {
-    this.registerGame();
-    this.registerGeneralCommand();
+    this.registerCommands();
     setInterval(() => this.sessionService.cleanupExpiredSessions(), 1800000); // 30 minutes
   }
 
-  private registerGame() {
-    this.games.set("hangman", HangmanGame);
-    this.setAlias("hm", "hangman");
+  private registerCommands() {
+    this.registerCommand({
+      name: "hangman",
+      aliases: ["hm", "tebakkata"],
+      description:
+        "Game tebak kata. Tebak huruf untuk menemukan kata yang tersembunyi.",
+      category: "game",
+      commandClass: HangmanGame,
+      cooldown: 5000,
+    });
 
-    this.games.set("rps", RockPaperScissorsGame);
+    this.registerCommand({
+      name: "rps",
+      aliases: ["batu", "gunting", "kertas", "rockpaperscissors"],
+      description: "Batu-Gunting-Kertas (vs AI/Multiplayer)",
+      category: "game",
+      commandClass: RockPaperScissorsGame,
+      cooldown: 3000,
+    });
+
+    this.registerCommand({
+      name: "fufufafa",
+      description: "Komentar lucu",
+      category: "general",
+      commandClass: FufufafaComments,
+      cooldown: 10000,
+      maxUses: 3,
+    });
   }
 
-  private registerGeneralCommand() {
-    this.general.set("fufufafa", FufufafaComments);
+  private registerCommand(info: CommandInfo): void {
+    this.commands.set(info.name.toLowerCase(), info);
+
+    if (info.aliases) {
+      for (const alias of info.aliases) {
+        this.aliases.set(alias.toLowerCase(), info.name.toLowerCase());
+      }
+    }
   }
 
-  private setAlias(alias: string, command: string): void {
-    this.aliases.set(alias.toLowerCase(), command.toLowerCase());
+  private isGameCommand(command: string): boolean {
+    const info = this.getCommandInfo(command);
+    return info ? info.category === "game" : false;
+  }
+
+  private isGeneralCommand(command: string): boolean {
+    const info = this.getCommandInfo(command);
+    return info ? info.category === "general" : false;
+  }
+
+  private isAdminCommand(command: string): boolean {
+    const info = this.getCommandInfo(command);
+    return info ? info.category === "admin" : false;
+  }
+
+  private getCommandInfo(command: string): CommandInfo | undefined {
+    // Check if it's an alias first
+    const actualCommand = this.aliases.has(command)
+      ? this.aliases.get(command)!
+      : command;
+
+    return this.commands.get(actualCommand);
+  }
+
+  private getCommandInstance(command: string): CommandInterface {
+    const info = this.getCommandInfo(command);
+    if (!info) {
+      throw new Error(`Command not found: ${command}`);
+    }
+
+    return new info.commandClass();
   }
 
   isCommand(text: string): boolean {
@@ -72,8 +140,14 @@ export class CommandHandler {
     try {
       const { command, args } = this.extractCommand(text);
 
+      // Handle built-in commands
       if (command === "games") {
         await this.listGames(jid, sock);
+        return;
+      }
+
+      if (command === "help") {
+        await this.handleHelpCommand(args, jid, sock);
         return;
       }
 
@@ -82,22 +156,72 @@ export class CommandHandler {
         return;
       }
 
-      // Check if the command is an alias, and if so, get the actual command
-      const actualCommand = this.aliases.has(command)
-        ? this.aliases.get(command)!
-        : command;
+      const commandInfo = this.getCommandInfo(command);
 
-      if (this.games.has(actualCommand)) {
-        await this.handleGameCommand(actualCommand, args, jid, user, sock, msg);
-      } else if (this.general.has(actualCommand)) {
-        await this.handleGeneralCommand(
-          actualCommand,
-          args,
-          jid,
-          user,
-          sock,
-          msg
-        );
+      if (commandInfo) {
+        const actualCommand = commandInfo.name;
+
+        if (commandInfo.cooldown) {
+          const cooldownTime = commandInfo.cooldown;
+          const maxUses = commandInfo.maxUses || 1;
+
+          if (
+            this.cooldownManager.isOnCooldown(
+              user,
+              actualCommand,
+              cooldownTime,
+              maxUses
+            )
+          ) {
+            const remainingTime = this.cooldownManager.getRemainingCooldown(
+              user,
+              actualCommand,
+              cooldownTime
+            );
+            await sock.sendMessage(jid, {
+              text: `${BotConfig.emoji.error} Kamu terlalu cepat menggunakan perintah ini. Coba lagi dalam ${remainingTime} detik.`,
+            });
+            return;
+          }
+        }
+
+        if (commandInfo.category === "game") {
+          await this.handleGameCommand(
+            actualCommand,
+            args,
+            jid,
+            user,
+            sock,
+            msg
+          );
+        } else if (commandInfo.category === "general") {
+          await this.handleGeneralCommand(
+            actualCommand,
+            args,
+            jid,
+            user,
+            sock,
+            msg
+          );
+        } else if (commandInfo.category === "admin") {
+          await this.handleAdminCommand(
+            actualCommand,
+            args,
+            jid,
+            user,
+            sock,
+            msg
+          );
+        } else {
+          await this.handleUtilityCommand(
+            actualCommand,
+            args,
+            jid,
+            user,
+            sock,
+            msg
+          );
+        }
       } else {
         await sock.sendMessage(jid, {
           text: BotConfig.unknownCommandResponse.replace(
@@ -109,30 +233,126 @@ export class CommandHandler {
     } catch (error) {
       log.error(`Error handling command: ${error}`);
       await sock.sendMessage(jid, {
-        text: "Terjadi error saat memproses perintah. Silahkan coba lagi.",
+        text: BotConfig.messages.commandError,
       });
     }
   }
 
+  private async handleGameCommand(
+    command: string,
+    args: string[],
+    jid: string,
+    user: string,
+    sock: WebSocketInfo,
+    msg: proto.IWebMessageInfo
+  ) {
+    const commandInstance = this.getCommandInstance(command);
+    const existingSession = this.sessionService.getSession(jid, user);
+
+    if (existingSession && existingSession.game !== command) {
+      // Special case: Allow RPS commands if the session is an RPS multiplayer link
+      if (command === "rps" && existingSession.game === "rps_link") {
+        // This is fine - let the RPS game handle its link sessions
+      } else {
+        await sock.sendMessage(jid, {
+          text: BotConfig.messages.gameInProgress
+            .replace("{game}", existingSession.game)
+            .replace("{prefix}", BotConfig.prefix),
+        });
+        return;
+      }
+    }
+
+    await commandInstance.handleCommand(
+      args,
+      jid,
+      user,
+      sock,
+      this.sessionService,
+      msg
+    );
+  }
+
+  private async handleGeneralCommand(
+    command: string,
+    args: string[],
+    jid: string,
+    user: string,
+    sock: WebSocketInfo,
+    msg: proto.IWebMessageInfo
+  ) {
+    const commandInstance = this.getCommandInstance(command);
+    await commandInstance.handleCommand(
+      args,
+      jid,
+      user,
+      sock,
+      this.sessionService,
+      msg
+    );
+  }
+
+  private async handleAdminCommand(
+    command: string,
+    args: string[],
+    jid: string,
+    user: string,
+    sock: WebSocketInfo,
+    msg: proto.IWebMessageInfo
+  ) {
+    // TODO: Check if user is admin before executing admin commands
+    // For now we'll just execute the command like a general command
+    const commandInstance = this.getCommandInstance(command);
+    await commandInstance.handleCommand(
+      args,
+      jid,
+      user,
+      sock,
+      this.sessionService,
+      msg
+    );
+  }
+
+  private async handleUtilityCommand(
+    command: string,
+    args: string[],
+    jid: string,
+    user: string,
+    sock: WebSocketInfo,
+    msg: proto.IWebMessageInfo
+  ) {
+    const commandInstance = this.getCommandInstance(command);
+    await commandInstance.handleCommand(
+      args,
+      jid,
+      user,
+      sock,
+      this.sessionService,
+      msg
+    );
+  }
+
   private async listGames(jid: string, sock: WebSocketInfo) {
-    const gameList = Array.from(this.games.keys())
-      .map((g) => `• *${BotConfig.prefix}${g}* - ${this.getGameDescription(g)}`)
+    const gameCommands = Array.from(this.commands.values()).filter(
+      (cmd) => cmd.category === "game"
+    );
+
+    const gameList = gameCommands
+      .map((game) => {
+        let aliasText = "";
+        if (game.aliases && game.aliases.length > 0) {
+          aliasText = ` (alias: ${game.aliases
+            .map((a) => `*${BotConfig.prefix}${a}*`)
+            .join(", ")})`;
+        }
+
+        return `• *${BotConfig.prefix}${game.name}*${aliasText} - ${game.description}`;
+      })
       .join("\n");
 
     await sock.sendMessage(jid, {
-      text: `🎮 Daftar Game yang Tersedia:\n${gameList}\n\nGunakan ${BotConfig.prefix}<nama game> start untuk memulai.`,
+      text: `${BotConfig.emoji.games} Daftar Game yang Tersedia:\n${gameList}\n\nGunakan ${BotConfig.prefix}<nama game> start untuk memulai, atau ${BotConfig.prefix}help <nama game> untuk bantuan.`,
     });
-  }
-
-  private getGameDescription(gameName: string): string {
-    switch (gameName) {
-      case "hangman":
-        return "Game tebak kata. Tebak huruf untuk menemukan kata yang tersembunyi.";
-      case "rps":
-        return "Batu-Gunting-Kertas (vs AI/Multiplayer)";
-      default:
-        return "_Deskripsi tidak tersedia._";
-    }
   }
 
   private async handleStopCommand(
@@ -144,61 +364,146 @@ export class CommandHandler {
     if (session) {
       this.sessionService.clearSession(jid, user);
       await sock.sendMessage(jid, {
-        text: `Game ${session.game} telah dihentikan.`,
+        text: BotConfig.messages.gameStopped.replace("{game}", session.game),
       });
     } else {
       await sock.sendMessage(jid, {
-        text: "Tidak ada game yang sedang berjalan.",
+        text: BotConfig.messages.noGameRunning,
       });
     }
   }
 
-  private async handleGeneralCommand(
-    command: string,
+  private async handleHelpCommand(
     args: string[],
     jid: string,
-    user: string,
-    sock: WebSocketInfo,
-    msg: proto.IWebMessageInfo
+    sock: WebSocketInfo
   ) {
-    const GeneralClass = this.general.get(command)!;
-    const general = new GeneralClass();
+    if (args.length === 0) {
+      const gameCommands: string[] = [];
+      const generalCommands: string[] = [];
+      const adminCommands: string[] = [];
+      const utilityCommands: string[] = [];
 
-    await general.handleCommand(
-      args,
-      jid,
-      user,
-      sock,
-      this.sessionService,
-      msg
-    );
-  }
+      for (const [_, info] of this.commands) {
+        const commandText = `*${BotConfig.prefix}${info.name}* - ${info.description}`;
 
-  private async handleGameCommand(
-    command: string,
-    args: string[],
-    jid: string,
-    user: string,
-    sock: WebSocketInfo,
-    msg: proto.IWebMessageInfo
-  ) {
-    const GameClass = this.games.get(command)!;
-    const game = new GameClass();
-
-    const existingSession = this.sessionService.getSession(jid, user);
-
-    if (existingSession && existingSession.game !== command) {
-      // Special case: Allow RPS commands if the session is an RPS multiplayer link
-      if (command === "rps" && existingSession.game === "rps_link") {
-        // This is fine - let the RPS game handle its link sessions
-      } else {
-        await sock.sendMessage(jid, {
-          text: `Kamu sedang dalam game ${existingSession.game}. Akhiri dulu dengan ${BotConfig.prefix}stop.`,
-        });
-        return;
+        switch (info.category) {
+          case "game":
+            gameCommands.push(commandText);
+            break;
+          case "general":
+            generalCommands.push(commandText);
+            break;
+          case "admin":
+            adminCommands.push(commandText);
+            break;
+          case "utility":
+            utilityCommands.push(commandText);
+            break;
+        }
       }
+
+      let helpText = `${BotConfig.emoji.help} *Bantuan ${BotConfig.name} Bot*\n\n`;
+
+      helpText += `*Perintah Inti:*\n`;
+      helpText += `*${BotConfig.prefix}games* - Melihat daftar game yang tersedia\n`;
+      helpText += `*${BotConfig.prefix}help [command]* - Menampilkan bantuan untuk command tertentu\n`;
+      helpText += `*${BotConfig.prefix}stop* - Menghentikan game yang sedang berjalan\n\n`;
+
+      if (gameCommands.length > 0) {
+        helpText += `*${BotConfig.emoji.games} Game:*\n${gameCommands.join(
+          "\n"
+        )}\n\n`;
+      }
+
+      if (generalCommands.length > 0) {
+        helpText += `*${BotConfig.emoji.info} Umum:*\n${generalCommands.join(
+          "\n"
+        )}\n\n`;
+      }
+
+      if (adminCommands.length > 0) {
+        helpText += `*Admin:*\n${adminCommands.join("\n")}\n\n`;
+      }
+
+      if (utilityCommands.length > 0) {
+        helpText += `*Utilitas:*\n${utilityCommands.join("\n")}\n\n`;
+      }
+
+      helpText += `Gunakan ${BotConfig.prefix}help [nama perintah] untuk informasi lebih detail.`;
+
+      await sock.sendMessage(jid, { text: helpText });
+      return;
     }
 
-    await game.handleCommand(args, jid, user, sock, this.sessionService, msg);
+    const commandName = args[0].toLowerCase();
+    const commandInfo = this.getCommandInfo(commandName);
+
+    if (!commandInfo) {
+      let helpText = "";
+
+      if (commandName === "games") {
+        helpText =
+          `*${BotConfig.prefix}games*\n` +
+          `*Deskripsi:* Menampilkan daftar game yang tersedia\n\n` +
+          `Ketik ${BotConfig.prefix}games untuk melihat semua game yang dapat dimainkan.`;
+      } else if (commandName === "stop") {
+        helpText =
+          `*${BotConfig.prefix}stop*\n` +
+          `*Deskripsi:* Menghentikan game yang sedang berjalan\n\n` +
+          `Ketik ${BotConfig.prefix}stop untuk keluar dari game yang sedang kamu mainkan.`;
+      } else if (commandName === "help") {
+        helpText =
+          `*${BotConfig.prefix}help [perintah]*\n` +
+          `*Deskripsi:* Menampilkan bantuan untuk perintah tertentu\n\n` +
+          `*Contoh:*\n` +
+          `${BotConfig.prefix}help - Menampilkan semua bantuan\n` +
+          `${BotConfig.prefix}help hangman - Bantuan untuk game Hangman`;
+      } else {
+        helpText =
+          `Perintah *${BotConfig.prefix}${args[0]}* tidak ditemukan.\n` +
+          `Gunakan ${BotConfig.prefix}help untuk melihat daftar perintah yang tersedia.`;
+      }
+
+      await sock.sendMessage(jid, { text: helpText });
+      return;
+    }
+
+    let aliasText = "";
+    if (commandInfo.aliases && commandInfo.aliases.length > 0) {
+      aliasText = `\n*Alias:* ${commandInfo.aliases
+        .map((a) => BotConfig.prefix + a)
+        .join(", ")}`;
+    }
+
+    let helpText =
+      `*${BotConfig.prefix}${commandInfo.name}*${aliasText}\n` +
+      `*Deskripsi:* ${commandInfo.description}\n\n`;
+
+    if (commandInfo.category === "game") {
+      helpText += `*Cara bermain:*\n`;
+
+      switch (commandInfo.name) {
+        case "hangman":
+          helpText +=
+            `1. Ketik ${BotConfig.prefix}hangman start untuk memulai permainan baru\n` +
+            `2. Bot akan menampilkan kata yang harus ditebak (tersembunyi)\n` +
+            `3. Tebak huruf satu per satu dengan mengetik ${BotConfig.prefix}hangman [huruf]\n` +
+            `4. Berhasil menebak semua huruf sebelum kesempatan habis untuk menang!\n`;
+          break;
+        case "rps":
+          helpText +=
+            `1. Ketik ${BotConfig.prefix}rps start untuk bermain dengan AI\n` +
+            `2. Ketik ${BotConfig.prefix}rps multiplayer untuk bermain dengan pemain lain\n` +
+            `3. Pilih batu, gunting, atau kertas saat giliran bermain\n`;
+          break;
+        default:
+          helpText += `Gunakan ${BotConfig.prefix}${commandInfo.name} start untuk memulai.`;
+      }
+    } else {
+      helpText += `Gunakan ${BotConfig.prefix}${commandInfo.name} untuk menjalankan perintah ini.`;
+    }
+
+    await sock.sendMessage(jid, { text: helpText });
   }
 }

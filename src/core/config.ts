@@ -17,6 +17,29 @@ export const BotConfig = {
   defaultGameHelp: "Ketikan {prefix}games untuk melihat daftar game.",
   unknownCommandResponse:
     "Perintah tidak dikenali. Ketik {prefix}games untuk bantuan.",
+
+  // Pengaturan UI
+  emoji: {
+    games: "🎮",
+    help: "📋",
+    error: "❌",
+    success: "✅",
+    info: "ℹ️",
+    hangman: "👻",
+    rps: "✂️",
+  },
+
+  // Pesan respons
+  messages: {
+    sessionTimeout: "Game telah berakhir karena tidak ada aktivitas.",
+    gameInProgress:
+      "Kamu sedang dalam game {game}. Akhiri dulu dengan {prefix}stop.",
+    gameNotFound:
+      "Game tidak ditemukan. Ketik {prefix}games untuk melihat daftar game.",
+    gameStopped: "Game {game} telah dihentikan.",
+    noGameRunning: "Tidak ada game yang sedang berjalan.",
+    commandError: "Terjadi error saat memproses perintah. Silahkan coba lagi.",
+  },
 };
 
 export const log = new Logger({
