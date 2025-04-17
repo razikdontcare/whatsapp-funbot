@@ -30,15 +30,19 @@ export class FufufafaComments implements CommandInterface {
         fufufafaComments = await getRandomFufufafaComment();
       }
 
-      const imageBuffer = await axios.get(fufufafaComments.image_url, {
-        responseType: "arraybuffer",
-        timeout: 5000,
-        family: 4,
-      });
+      const imageBuffer = args.includes("textonly")
+        ? await axios.get(fufufafaComments.image_url, {
+            responseType: "arraybuffer",
+            timeout: 5000,
+            family: 4,
+          })
+        : null;
 
-      const image = await sharp(imageBuffer.data)
-        .jpeg({ quality: IMAGE_QUALITY, mozjpeg: true })
-        .toBuffer();
+      const image = args.includes("textonly")
+        ? await sharp(imageBuffer?.data)
+            .jpeg({ quality: IMAGE_QUALITY, mozjpeg: true })
+            .toBuffer()
+        : null;
 
       const caption = `${fufufafaComments.content}\n\nPosted on ${new Date(
         Number(fufufafaComments.datetime)
@@ -68,7 +72,7 @@ export class FufufafaComments implements CommandInterface {
           await sock.sendMessage(
             jid,
             {
-              image: Buffer.from(image),
+              image: Buffer.from(image!),
             },
             {
               quoted,
@@ -92,7 +96,7 @@ export class FufufafaComments implements CommandInterface {
           await sock.sendMessage(
             jid,
             {
-              image: Buffer.from(image),
+              image: Buffer.from(image!),
               caption,
             },
             { quoted }
@@ -101,7 +105,7 @@ export class FufufafaComments implements CommandInterface {
       } else {
         if (args.length > 0 && args.includes("imgonly")) {
           await sock.sendMessage(jid, {
-            image: Buffer.from(image),
+            image: Buffer.from(image!),
           });
           return;
         } else if (args.length > 0 && args.includes("textonly")) {
@@ -111,7 +115,7 @@ export class FufufafaComments implements CommandInterface {
           return;
         } else {
           await sock.sendMessage(jid, {
-            image: Buffer.from(image),
+            image: Buffer.from(image!),
             caption,
           });
           return;
