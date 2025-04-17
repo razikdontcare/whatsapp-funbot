@@ -53,7 +53,10 @@ export class BotClient {
       try {
         this.authState = await useMongoDBAuthState(
           process.env.MONGO_URI!,
-          process.env.NODE_ENV !== "production" ? "baileys_auth_dev" : undefined
+          process.env.NODE_ENV !== "production"
+            ? "baileys_auth_dev"
+            : undefined,
+          process.env.NODE_ENV !== "production" ? "baileys_dev_" : undefined
         );
         const { state, saveCreds, removeCreds, close } = this.authState;
 
