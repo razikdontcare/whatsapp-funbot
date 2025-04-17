@@ -35,9 +35,6 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
-# Expose ports if needed
-# EXPOSE 3000
-
 # Set environment variables
 ENV NODE_ENV=production \
     MONGO_URI=mongodb://localhost:27017/whatsapp_bot
