@@ -25,6 +25,8 @@ export const useMongoDBAuthState = async (
   removeCreds: () => Promise<void>;
   close: () => Promise<void>;
 }> => {
+  log.debug("Connecting to " + dbName + " database");
+  log.debug("Using collection prefix: " + collectionPrefix);
   // Connect with timeout and retry options
   const client = new MongoClient(mongoUri, {
     connectTimeoutMS: 10000,

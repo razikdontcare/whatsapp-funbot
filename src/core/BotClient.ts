@@ -1,4 +1,4 @@
-import { makeWASocket, DisconnectReason, useMultiFileAuthState } from "baileys";
+import { makeWASocket, DisconnectReason, AuthenticationState } from "baileys";
 import { CommandHandler } from "./CommandHandler.js";
 import { SessionService } from "../services/SessionService.js";
 import { BotConfig } from "./config.js";
@@ -23,7 +23,7 @@ export class BotClient {
   private botId: string | null = null;
   private reconnectAttempts: number = 0;
   private authState: {
-    state: any;
+    state: AuthenticationState;
     saveCreds: () => Promise<void>;
     removeCreds: () => Promise<void>;
     close: () => Promise<void>;
@@ -46,8 +46,14 @@ export class BotClient {
       // Connect to MongoDB and initialize auth state
       log.info("Initializing WhatsApp connection...");
       try {
-        this.authState = await useMongoDBAuthState(process.env.MONGO_URI!);
-        const { state, saveCreds, removeCreds, close } = this.authState;
+        this.authState = await useMongoDBAuthState(
+          process.env.MONGO_URI!,
+          process.env.NODE_ENV !== "production"
+            ? "baileys_auth_dev"
+            : undefined,
+          process.env.NODE_ENV !== "production" ? "baileys_dev_" : undefined
+        );
+        const { state } = this.authState;
 
         // Create a new socket connection
         this.sock = makeWASocket({
