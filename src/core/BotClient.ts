@@ -1,4 +1,9 @@
-import { makeWASocket, DisconnectReason, useMultiFileAuthState } from "baileys";
+import {
+  makeWASocket,
+  DisconnectReason,
+  useMultiFileAuthState,
+  AuthenticationState,
+} from "baileys";
 import { CommandHandler } from "./CommandHandler.js";
 import { SessionService } from "../services/SessionService.js";
 import { BotConfig } from "./config.js";
@@ -23,7 +28,7 @@ export class BotClient {
   private botId: string | null = null;
   private reconnectAttempts: number = 0;
   private authState: {
-    state: any;
+    state: AuthenticationState;
     saveCreds: () => Promise<void>;
     removeCreds: () => Promise<void>;
     close: () => Promise<void>;
