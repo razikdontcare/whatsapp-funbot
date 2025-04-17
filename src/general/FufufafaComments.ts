@@ -30,7 +30,7 @@ export class FufufafaComments implements CommandInterface {
         fufufafaComments = await getRandomFufufafaComment();
       }
 
-      const imageBuffer = args.includes("textonly")
+      const imageBuffer = !args.includes("textonly")
         ? await axios.get(fufufafaComments.image_url, {
             responseType: "arraybuffer",
             timeout: 5000,
@@ -38,7 +38,7 @@ export class FufufafaComments implements CommandInterface {
           })
         : null;
 
-      const image = args.includes("textonly")
+      const image = !args.includes("textonly")
         ? await sharp(imageBuffer?.data)
             .jpeg({ quality: IMAGE_QUALITY, mozjpeg: true })
             .toBuffer()
