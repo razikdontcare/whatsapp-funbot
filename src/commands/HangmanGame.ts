@@ -5,6 +5,8 @@ import { WebSocketInfo } from "../core/types.js";
 import { getRandomKBBI } from "../utils/randomKBBI.js";
 import { randomBytes } from "crypto";
 import { proto } from "baileys";
+import { GameLeaderboardService } from "../services/GameLeaderboardService.js";
+import { getMongoClient } from "../core/mongo.js";
 
 const MAX_ATTEMPTS = 6;
 const MASK_CHAR = "#";
@@ -486,6 +488,32 @@ export class HangmanGame implements CommandInterface {
         mentions: [guesserJid, winnerJid, ...allPlayerJids],
       });
 
+      const mongoClient = await getMongoClient();
+      const leaderboardService = new GameLeaderboardService(mongoClient);
+
+      for (const player of allPlayerJids) {
+        const currentStat = await leaderboardService.getUserStat(
+          player,
+          HangmanGame.commandInfo.name
+        );
+        await leaderboardService.updateUserStat(
+          player,
+          HangmanGame.commandInfo.name,
+          {
+            score: currentStat
+              ? currentStat.score
+                ? currentStat.score + gameData.playerScores[player]
+                : gameData.playerScores[player]
+              : gameData.playerScores[player],
+            wins: currentStat
+              ? currentStat.wins
+                ? currentStat.wins + 1
+                : 1
+              : 1,
+          }
+        );
+      }
+
       this.endGameCleanup(jid, gameId, gameData.players, sessionService);
       return;
     }
@@ -521,6 +549,32 @@ export class HangmanGame implements CommandInterface {
         text: `😢 Game Over untuk game *${gameId}*! Kalian kehabisan kesempatan.\nKata yang benar: ${gameData.word}\n\n📊 SKOR AKHIR:\n${scoreBoardText}`,
         mentions: allPlayerJids,
       });
+
+      const mongoClient = await getMongoClient();
+      const leaderboardService = new GameLeaderboardService(mongoClient);
+
+      for (const player of allPlayerJids) {
+        const currentStat = await leaderboardService.getUserStat(
+          player,
+          HangmanGame.commandInfo.name
+        );
+        await leaderboardService.updateUserStat(
+          player,
+          HangmanGame.commandInfo.name,
+          {
+            score: currentStat
+              ? currentStat.score
+                ? currentStat.score + gameData.playerScores[player]
+                : gameData.playerScores[player]
+              : gameData.playerScores[player],
+            losses: currentStat
+              ? currentStat.losses
+                ? currentStat.losses + 1
+                : 1
+              : 1,
+          }
+        );
+      }
 
       this.endGameCleanup(jid, gameId, gameData.players, sessionService);
       return;
