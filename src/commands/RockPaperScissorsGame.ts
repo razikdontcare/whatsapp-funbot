@@ -34,6 +34,14 @@ const MULTIPLAYER_SESSION_KEY = "rps_multiplayer_game";
 const LINK_SESSION_KEY = "rps";
 
 export class RockPaperScissorsGame implements CommandInterface {
+  static commandInfo = {
+    name: "rps",
+    aliases: [],
+    description: "Batu-Gunting-Kertas (vs AI/Multiplayer)",
+    category: "game",
+    commandClass: RockPaperScissorsGame,
+    cooldown: 3000,
+  };
   private readonly choices: InputRPSChoice[] = [
     "rock",
     "paper",

@@ -1,5 +1,8 @@
 import { Logger } from "../utils/logger.js";
 
+// Define all possible roles here
+export type UserRole = "admin" | "moderator" | "vip";
+
 export const BotConfig = {
   // Pengaturan Prefix
   prefix: "!",
@@ -40,7 +43,20 @@ export const BotConfig = {
     noGameRunning: "Tidak ada game yang sedang berjalan.",
     commandError: "Terjadi error saat memproses perintah. Silahkan coba lagi.",
   },
+
+  // Admins: List of WhatsApp JIDs allowed to use admin commands
+  admins: [] as string[],
+  moderators: [] as string[],
+  vips: [] as string[],
 };
+
+export function getUserRoles(userJid: string): UserRole[] {
+  const roles: UserRole[] = [];
+  if (BotConfig.admins.includes(userJid)) roles.push("admin");
+  if (BotConfig.moderators.includes(userJid)) roles.push("moderator");
+  if (BotConfig.vips.includes(userJid)) roles.push("vip");
+  return roles;
+}
 
 export const log = new Logger({
   level: "debug",

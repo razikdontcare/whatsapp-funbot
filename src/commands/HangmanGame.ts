@@ -29,6 +29,15 @@ function generateGameId(): string {
 }
 
 export class HangmanGame implements CommandInterface {
+  static commandInfo = {
+    name: "hangman",
+    aliases: ["hm", "tebakkata"],
+    description:
+      "Game tebak kata. Tebak huruf untuk menemukan kata yang tersembunyi.",
+    category: "game",
+    commandClass: HangmanGame,
+    cooldown: 5000,
+  };
   async handleCommand(
     args: string[],
     jid: string,

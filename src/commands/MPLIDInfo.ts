@@ -11,6 +11,14 @@ import {
 } from "../utils/mplid.js";
 
 export class MPLIDInfo implements CommandInterface {
+  static commandInfo = {
+    name: "mplid",
+    description: "Informasi tentang MPL Indonesia (MPLID)",
+    category: "general",
+    commandClass: MPLIDInfo,
+    cooldown: 5000,
+    maxUses: 3,
+  };
   async handleCommand(
     args: string[],
     jid: string,

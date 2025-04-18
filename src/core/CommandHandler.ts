@@ -1,14 +1,13 @@
 import { CommandInterface } from "./CommandInterface.js";
 import { SessionService } from "../services/SessionService.js";
-import { BotConfig, log } from "./config.js";
+import { CommandUsageService } from "../services/CommandUsageService.js";
+import { BotConfig, log, getUserRoles } from "./config.js";
 import { WebSocketInfo } from "./types.js";
 import { CooldownManager } from "./CooldownManager.js";
-
-import { HangmanGame } from "../games/HangmanGame.js";
-import { RockPaperScissorsGame } from "../games/RockPaperScissorsGame.js";
-import { FufufafaComments } from "../general/FufufafaComments.js";
-import { MPLIDInfo } from "../general/MPLIDInfo.js";
 import { proto } from "baileys";
+
+import fs from "fs";
+import path from "path";
 
 export interface CommandInfo {
   name: string;
@@ -16,8 +15,9 @@ export interface CommandInfo {
   description: string;
   category: "game" | "general" | "admin" | "utility";
   commandClass: new () => CommandInterface;
-  cooldown?: number; // Cooldown in milliseconds
-  maxUses?: number; // Maximum uses before cooldown triggers
+  cooldown?: number;
+  maxUses?: number;
+  requiredRoles?: import("./config.js").UserRole[];
 }
 
 export class CommandHandler {
@@ -25,49 +25,27 @@ export class CommandHandler {
   private aliases: Map<string, string> = new Map();
   private cooldownManager: CooldownManager = new CooldownManager();
 
-  constructor(private sessionService: SessionService) {
+  constructor(
+    private sessionService: SessionService,
+    private usageService?: CommandUsageService
+  ) {
     this.registerCommands();
     setInterval(() => this.sessionService.cleanupExpiredSessions(), 1800000); // 30 minutes
   }
 
   private registerCommands() {
-    this.registerCommand({
-      name: "hangman",
-      aliases: ["hm", "tebakkata"],
-      description:
-        "Game tebak kata. Tebak huruf untuk menemukan kata yang tersembunyi.",
-      category: "game",
-      commandClass: HangmanGame,
-      cooldown: 5000,
-    });
-
-    this.registerCommand({
-      name: "rps",
-      aliases: [],
-      description: "Batu-Gunting-Kertas (vs AI/Multiplayer)",
-      category: "game",
-      commandClass: RockPaperScissorsGame,
-      cooldown: 3000,
-    });
-
-    this.registerCommand({
-      name: "fufufafa",
-      description:
-        "Komentar random dari akun Kaskus Fufufafa. (Total 699 komentar)",
-      category: "general",
-      commandClass: FufufafaComments,
-      cooldown: 10000,
-      maxUses: 3,
-    });
-
-    this.registerCommand({
-      name: "mplid",
-      description: "Informasi tentang MPL Indonesia (MPLID)",
-      category: "general",
-      commandClass: MPLIDInfo,
-      cooldown: 5000,
-      maxUses: 3,
-    });
+    const commandsDir = path.resolve(__dirname, "../commands");
+    const files = fs
+      .readdirSync(commandsDir)
+      .filter((f) => f.endsWith(".ts") || f.endsWith(".js"));
+    for (const file of files) {
+      const commandModule = require(path.join(commandsDir, file));
+      // Support both default and named exports
+      const CommandClass =
+        commandModule.default || Object.values(commandModule)[0];
+      if (!CommandClass || !CommandClass.commandInfo) continue;
+      this.registerCommand(CommandClass.commandInfo);
+    }
   }
 
   private registerCommand(info: CommandInfo): void {
@@ -167,9 +145,27 @@ export class CommandHandler {
         return;
       }
 
-      const commandInfo = this.getCommandInfo(command);
+      if (command === "stats" && this.usageService) {
+        await this.handleStatsCommand(jid, sock, user, args);
+        return;
+      }
 
+      const commandInfo = this.getCommandInfo(command);
       if (commandInfo) {
+        // Permission check for requiredRoles (type-safe, supports multiple roles)
+        if (commandInfo.requiredRoles && commandInfo.requiredRoles.length > 0) {
+          const userRoles = getUserRoles(user);
+          const hasRole = commandInfo.requiredRoles.some((role) =>
+            userRoles.includes(role)
+          );
+          if (!hasRole) {
+            await sock.sendMessage(jid, {
+              text: `${BotConfig.emoji.error} Kamu tidak memiliki izin untuk menggunakan perintah ini.`,
+            });
+            return;
+          }
+        }
+
         const actualCommand = commandInfo.name;
 
         if (commandInfo.cooldown) {
@@ -194,6 +190,11 @@ export class CommandHandler {
             });
             return;
           }
+        }
+
+        // Increment usage stats if service is available
+        if (this.usageService) {
+          await this.usageService.increment(commandInfo.name, user);
         }
 
         if (commandInfo.category === "game") {
@@ -537,5 +538,55 @@ export class CommandHandler {
     }
 
     await sock.sendMessage(jid, { text: helpText });
+  }
+
+  private async handleStatsCommand(
+    jid: string,
+    sock: WebSocketInfo,
+    user: string,
+    args: string[]
+  ) {
+    if (!this.usageService) {
+      await sock.sendMessage(jid, { text: "Statistik tidak tersedia." });
+      return;
+    }
+    let statsText = "";
+    if (args.length > 0) {
+      // Show stats for a specific command
+      const command = args[0].toLowerCase();
+      const stats = await this.usageService.getCommandStats(command);
+      if (stats.length === 0) {
+        statsText = `Belum ada statistik untuk perintah *${command}*.`;
+      } else {
+        statsText =
+          `Statistik penggunaan *${command}*:\n` +
+          stats
+            .map(
+              (s, i) =>
+                `${i + 1}. ${s.user}: ${
+                  s.count
+                }x (terakhir: ${s.lastUsed.toLocaleString()})`
+            )
+            .join("\n");
+      }
+    } else {
+      // Show global stats
+      const allStats = await this.usageService.getAllStats();
+      if (allStats.length === 0) {
+        statsText = "Belum ada statistik penggunaan perintah.";
+      } else {
+        // Aggregate by command
+        const byCommand: Record<string, number> = {};
+        for (const s of allStats) {
+          byCommand[s.command] = (byCommand[s.command] || 0) + s.count;
+        }
+        statsText =
+          "Statistik penggunaan perintah:\n" +
+          Object.entries(byCommand)
+            .map(([cmd, count], i) => `${i + 1}. *${cmd}*: ${count}x`)
+            .join("\n");
+      }
+    }
+    await sock.sendMessage(jid, { text: statsText });
   }
 }
