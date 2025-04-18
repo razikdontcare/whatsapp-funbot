@@ -6,7 +6,7 @@ import baileys, {
   SignalDataTypeMap,
   SignalDataSet,
 } from "baileys";
-import { log } from "./config.js";
+import { BotConfig, log } from "./config.js";
 
 const { proto, initAuthCreds } = baileys;
 
@@ -17,8 +17,8 @@ interface AuthDocument {
 
 export const useMongoDBAuthState = async (
   mongoUri: string,
-  dbName: string = "baileys_auth",
-  collectionPrefix: string = "baileys_",
+  dbName: string = BotConfig.sessionName,
+  collectionPrefix: string = "auth_",
   mongoClient?: MongoClient
 ): Promise<{
   state: AuthenticationState;
