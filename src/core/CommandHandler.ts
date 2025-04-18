@@ -7,6 +7,7 @@ import { CooldownManager } from "./CooldownManager.js";
 import { HangmanGame } from "../games/HangmanGame.js";
 import { RockPaperScissorsGame } from "../games/RockPaperScissorsGame.js";
 import { FufufafaComments } from "../general/FufufafaComments.js";
+import { MPLIDInfo } from "../general/MPLIDInfo.js";
 import { proto } from "baileys";
 
 export interface CommandInfo {
@@ -56,6 +57,15 @@ export class CommandHandler {
       category: "general",
       commandClass: FufufafaComments,
       cooldown: 10000,
+      maxUses: 3,
+    });
+
+    this.registerCommand({
+      name: "mplid",
+      description: "Informasi tentang MPL Indonesia (MPLID)",
+      category: "general",
+      commandClass: MPLIDInfo,
+      cooldown: 5000,
       maxUses: 3,
     });
   }
@@ -511,6 +521,13 @@ export class CommandHandler {
             `2. Gunakan ${BotConfig.prefix}fufufafa [id] untuk mendapatkan komentar tertentu\n` +
             `3. Gunakan ${BotConfig.prefix}fufufafa [id] imgonly untuk mendapatkan gambar saja\n` +
             `4. Gunakan ${BotConfig.prefix}fufufafa [id] textonly untuk mendapatkan teks saja\n`;
+          break;
+        case "mplid":
+          helpText +=
+            `1. Ketik ${BotConfig.prefix}mplid teams untuk melihat daftar tim MPLID\n` +
+            `2. Ketik ${BotConfig.prefix}mplid schedule untuk melihat jadwal MPLID\n` +
+            `3. Ketik ${BotConfig.prefix}mplid standings untuk melihat klasemen MPLID\n` +
+            `4. Ketik ${BotConfig.prefix}mplid team [team_id] untuk melihat informasi tim berdasarkan ID (ID Tim adalah singkatan nama tiap tim, contoh: "alter ego esports" memiliki ID "ae")\n`;
           break;
         default:
           helpText += `Gunakan ${BotConfig.prefix}${commandInfo.name} untuk menjalankan perintah ini.`;

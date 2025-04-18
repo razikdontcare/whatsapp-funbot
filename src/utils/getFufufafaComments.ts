@@ -9,15 +9,17 @@ export type FufufafaCommentsResponse = {
   image_url: string;
 };
 
+const BASE_URL = "https://fufufafapi.vanirvan.my.id";
+
+const fufufafaClient = axios.create({
+  baseURL: BASE_URL,
+  timeout: 5000,
+  family: 4,
+});
+
 export async function getRandomFufufafaComment(): Promise<FufufafaCommentsResponse> {
   try {
-    const response = await axios.get(
-      "https://fufufafapi.vanirvan.my.id/api/random",
-      {
-        timeout: 5000,
-        family: 4,
-      }
-    );
+    const response = await fufufafaClient.get("/api/random");
     const data = response.data;
 
     if (data) {
@@ -39,13 +41,7 @@ export async function getRandomFufufafaComment(): Promise<FufufafaCommentsRespon
 
 export async function getFufufafaCommentById(id: number) {
   try {
-    const response = await axios.get(
-      `https://fufufafapi.vanirvan.my.id/api/${id}`,
-      {
-        timeout: 5000,
-        family: 4,
-      }
-    );
+    const response = await fufufafaClient.get(`/api/${id}`);
     const data = response.data;
 
     if (data) {
