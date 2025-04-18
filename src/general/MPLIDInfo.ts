@@ -95,7 +95,7 @@ export class MPLIDInfo implements CommandInterface {
               .join("\n") || "Tidak ada pemain.";
           const teamInfo = `ID: ${team.id.toUpperCase()}\nNama: ${
             team.name
-          }\n\n${playerList}`;
+          }\n\nPemain:\n${playerList}`;
           if (!team.logo) {
             await sock.sendMessage(jid, {
               text: `Informasi Tim:\n${teamInfo}`,
