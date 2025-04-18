@@ -137,6 +137,12 @@ export class CommandHandler {
     try {
       const { command, args } = this.extractCommand(text);
 
+      log.debug(
+        `Handling command: ${command} with args: ${args.join(
+          ", "
+        )} for ${user} ${jid.endsWith("@g.us") ? "in " + jid : ""}`
+      );
+
       // Handle built-in commands
       if (command === "games") {
         await this.listGames(jid, sock);
