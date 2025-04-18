@@ -105,6 +105,11 @@ export class MPLIDInfo implements CommandInterface {
             text: "Tim tidak ditemukan.",
           });
         }
+      } else {
+        await sock.sendMessage(jid, {
+          text: "Perintah tidak dikenali. \n\n" + helpMessage,
+        });
+        return;
       }
     } catch (error) {
       log.error("Error handling MPLID command:", error);
