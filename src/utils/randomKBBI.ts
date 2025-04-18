@@ -6,15 +6,17 @@ export type KBBIResponse = {
   definition: string;
 };
 
+const BASE_URL = "https://kbbi.raf555.dev";
+
+const kbbiClient = axios.create({
+  baseURL: BASE_URL,
+  timeout: 5000,
+  family: 4,
+});
+
 export async function getRandomKBBI(): Promise<KBBIResponse> {
   try {
-    const response = await axios.get(
-      "https://kbbi.raf555.dev/api/v1/entry/_random",
-      {
-        timeout: 5000,
-        family: 4,
-      }
-    );
+    const response = await kbbiClient.get("/api/v1/entry/_random");
     const data = response.data;
 
     if (data) {
