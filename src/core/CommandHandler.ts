@@ -34,15 +34,14 @@ export class CommandHandler {
     private sessionService: SessionService,
     private usageService?: CommandUsageService
   ) {
-    this.registerCommands();
+    // this.registerCommands();
     setInterval(() => this.sessionService.cleanupExpiredSessions(), 1800000); // 30 minutes
   }
 
-  private async registerCommands() {
+  async registerCommands() {
     const commandsDir = path.resolve(__dirname, "../commands");
-    const files = fs
-      .readdirSync(commandsDir)
-      .filter((f) => f.endsWith(".ts") || f.endsWith(".js"));
+    const files = fs.readdirSync(commandsDir).filter((f) => f.endsWith(".js"));
+    // .filter((f) => f.endsWith(".ts") || f.endsWith(".js"));
     for (const file of files) {
       const commandModule = await import(path.join(commandsDir, file));
       // Support both default and named exports

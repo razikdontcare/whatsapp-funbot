@@ -42,11 +42,11 @@ export class BotClient {
   async start() {
     try {
       // Close previous auth if exists
-      if (this.authState) {
-        await this.authState
-          .close()
-          .catch((err) => log.error("Error closing previous auth state:", err));
-      }
+      // if (this.authState) {
+      //   await this.authState
+      //     .close()
+      //     .catch((err) => log.error("Error closing previous auth state:", err));
+      // }
 
       // Connect to MongoDB and initialize auth state
       log.info("Initializing WhatsApp connection...");
@@ -60,13 +60,13 @@ export class BotClient {
             this.usageService
           );
         }
+        await this.commandHandler.registerCommands();
         this.authState = await useMongoDBAuthState(
-          process.env.MONGO_URI!,
+          // process.env.MONGO_URI!,
           process.env.NODE_ENV !== "production"
             ? `${BotConfig.sessionName}_dev`
             : undefined,
-          process.env.NODE_ENV !== "production" ? "auth_dev_" : undefined,
-          this.mongoClient
+          process.env.NODE_ENV !== "production" ? "auth_dev_" : undefined
         );
         const { state } = this.authState;
 
