@@ -491,30 +491,28 @@ export class HangmanGame implements CommandInterface {
       const mongoClient = await getMongoClient();
       const leaderboardService = new GameLeaderboardService(mongoClient);
 
-      await Promise.all(
-        allPlayerJids.map(async (player) => {
-          const currentStat = await leaderboardService.getUserStat(
-            player,
-            HangmanGame.commandInfo.name
-          );
-          await leaderboardService.updateUserStat(
-            player,
-            HangmanGame.commandInfo.name,
-            {
-              score: currentStat
-                ? currentStat.score
-                  ? currentStat.score + gameData.playerScores[player]
-                  : gameData.playerScores[player]
-                : gameData.playerScores[player],
-              wins: currentStat
-                ? currentStat.wins
-                  ? currentStat.wins + 1
-                  : 1
-                : 1,
-            }
-          );
-        })
-      );
+      for (const player of allPlayerJids) {
+        const currentStat = await leaderboardService.getUserStat(
+          player,
+          HangmanGame.commandInfo.name
+        );
+        await leaderboardService.updateUserStat(
+          player,
+          HangmanGame.commandInfo.name,
+          {
+            score: currentStat
+              ? currentStat.score
+                ? currentStat.score + gameData.playerScores[player]
+                : gameData.playerScores[player]
+              : gameData.playerScores[player],
+            wins: currentStat
+              ? currentStat.wins
+                ? currentStat.wins + 1
+                : 1
+              : 1,
+          }
+        );
+      }
 
       this.endGameCleanup(jid, gameId, gameData.players, sessionService);
       return;
@@ -555,30 +553,28 @@ export class HangmanGame implements CommandInterface {
       const mongoClient = await getMongoClient();
       const leaderboardService = new GameLeaderboardService(mongoClient);
 
-      await Promise.all(
-        allPlayerJids.map(async (player) => {
-          const currentStat = await leaderboardService.getUserStat(
-            player,
-            HangmanGame.commandInfo.name
-          );
-          await leaderboardService.updateUserStat(
-            player,
-            HangmanGame.commandInfo.name,
-            {
-              score: currentStat
-                ? currentStat.score
-                  ? currentStat.score + gameData.playerScores[player]
-                  : gameData.playerScores[player]
-                : gameData.playerScores[player],
-              losses: currentStat
-                ? currentStat.losses
-                  ? currentStat.losses + 1
-                  : 1
-                : 1,
-            }
-          );
-        })
-      );
+      for (const player of allPlayerJids) {
+        const currentStat = await leaderboardService.getUserStat(
+          player,
+          HangmanGame.commandInfo.name
+        );
+        await leaderboardService.updateUserStat(
+          player,
+          HangmanGame.commandInfo.name,
+          {
+            score: currentStat
+              ? currentStat.score
+                ? currentStat.score + gameData.playerScores[player]
+                : gameData.playerScores[player]
+              : gameData.playerScores[player],
+            losses: currentStat
+              ? currentStat.losses
+                ? currentStat.losses + 1
+                : 1
+              : 1,
+          }
+        );
+      }
 
       this.endGameCleanup(jid, gameId, gameData.players, sessionService);
       return;
