@@ -32,20 +32,25 @@ export class LeaderboardCommand implements CommandInterface {
     const client = await getMongoClient();
     const leaderboardService = new GameLeaderboardService(client);
     const leaderboard = await leaderboardService.getLeaderboard(game, 10);
+
     if (!leaderboard.length) {
       await sock.sendMessage(jid, {
         text: `No leaderboard data for *${game}*.`,
       });
       return;
     }
+
+    const userJids = leaderboard.map((entry) => entry.user);
     const text =
       `🏆 *Leaderboard for ${game}*:\n` +
       leaderboard
         .map(
           (entry, i) =>
-            `${i + 1}. ${entry.user} — ${entry.score ?? entry.wins ?? 0} pts`
+            `${i + 1}. @${entry.user.split("@")[0]} — ${
+              entry.score ?? entry.wins ?? 0
+            } pts`
         )
         .join("\n");
-    await sock.sendMessage(jid, { text });
+    await sock.sendMessage(jid, { text, mentions: userJids });
   }
 }
