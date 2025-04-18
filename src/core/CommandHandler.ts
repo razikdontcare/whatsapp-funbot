@@ -38,13 +38,13 @@ export class CommandHandler {
     setInterval(() => this.sessionService.cleanupExpiredSessions(), 1800000); // 30 minutes
   }
 
-  private registerCommands() {
+  private async registerCommands() {
     const commandsDir = path.resolve(__dirname, "../commands");
     const files = fs
       .readdirSync(commandsDir)
       .filter((f) => f.endsWith(".ts") || f.endsWith(".js"));
     for (const file of files) {
-      const commandModule = require(path.join(commandsDir, file));
+      const commandModule = await import(path.join(commandsDir, file));
       // Support both default and named exports
       const CommandClass =
         commandModule.default || Object.values(commandModule)[0];

@@ -54,6 +54,12 @@ export class BotClient {
         // Use shared MongoClient for usage stats and auth
         this.mongoClient = await getMongoClient();
         this.usageService = new CommandUsageService(this.mongoClient);
+        if (this.usageService) {
+          this.commandHandler = new CommandHandler(
+            this.sessionService,
+            this.usageService
+          );
+        }
         this.authState = await useMongoDBAuthState(
           process.env.MONGO_URI!,
           process.env.NODE_ENV !== "production"
