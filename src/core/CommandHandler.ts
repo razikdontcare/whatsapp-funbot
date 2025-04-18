@@ -35,6 +35,9 @@ export class CommandHandler {
     private usageService?: CommandUsageService
   ) {
     // this.registerCommands();
+    (async () => {
+      await this.registerCommands();
+    })();
     setInterval(() => this.sessionService.cleanupExpiredSessions(), 1800000); // 30 minutes
   }
 
@@ -49,6 +52,7 @@ export class CommandHandler {
         commandModule.default || Object.values(commandModule)[0];
       if (!CommandClass || !CommandClass.commandInfo) continue;
       this.registerCommand(CommandClass.commandInfo);
+      // log.debug(`Registered command: ${CommandClass.commandInfo.name}`);
     }
   }
 
