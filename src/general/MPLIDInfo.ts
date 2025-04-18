@@ -96,8 +96,14 @@ export class MPLIDInfo implements CommandInterface {
           const teamInfo = `ID: ${team.id.toUpperCase()}\nNama: ${
             team.name
           }\n\n${playerList}`;
+          if (!team.logo) {
+            await sock.sendMessage(jid, {
+              text: `Informasi Tim:\n${teamInfo}`,
+            });
+            return;
+          }
           await sock.sendMessage(jid, {
-            image: { url: team.logo! },
+            image: { url: team.logo },
             caption: `Informasi Tim:\n${teamInfo}`,
           });
         } else {
