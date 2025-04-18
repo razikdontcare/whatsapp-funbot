@@ -20,7 +20,7 @@ export class MPLIDInfo implements CommandInterface {
     msg: proto.IWebMessageInfo
   ): Promise<void> {
     try {
-      const subCommand = args[0].toLowerCase();
+      const subCommand = args[0]?.toLowerCase();
       const helpMessage = `Perintah MPLID Info:
 - ${BotConfig.prefix}mplid teams: Menampilkan semua tim MPLID
 - ${BotConfig.prefix}mplid schedule: Menampilkan jadwal MPLID
