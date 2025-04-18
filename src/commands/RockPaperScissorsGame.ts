@@ -38,6 +38,20 @@ export class RockPaperScissorsGame implements CommandInterface {
     name: "rps",
     aliases: [],
     description: "Batu-Gunting-Kertas (vs AI/Multiplayer)",
+    helpText: `*Penggunaan:*
+• !rps start ai — Mulai game vs AI
+• !rps start multiplayer — Mulai game multiplayer di grup
+• !rps join — Bergabung sebagai player 2 di grup
+• !rps [batu|gunting|kertas] — Kirim pilihanmu (di DM untuk multiplayer)
+• !rps stop — Hentikan game yang sedang berjalan
+
+*Contoh:*
+!rps start ai
+!rps start multiplayer
+!rps batu
+!rps stop
+
+Untuk multiplayer, kedua pemain mengirim pilihan lewat DM ke bot.`,
     category: "game",
     commandClass: RockPaperScissorsGame,
     cooldown: 3000,

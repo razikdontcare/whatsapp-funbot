@@ -34,6 +34,22 @@ export class HangmanGame implements CommandInterface {
     aliases: ["hm", "tebakkata"],
     description:
       "Game tebak kata. Tebak huruf untuk menemukan kata yang tersembunyi.",
+    helpText: `*Penggunaan:*
+• !hangman start — Mulai game baru
+• !hangman join <id> — Bergabung ke game dengan ID tertentu
+• !hangman [huruf] — Menebak huruf (jika sudah join game)
+• !hangman guess <id> [huruf] — Menebak huruf di game tertentu
+• !hangman leave <id> — Keluar dari game
+• !hangman stop <id> — Hentikan game (host saja)
+• !hangman status <id> — Lihat status game
+
+*Contoh:*
+!hangman start
+!hangman join ab12cd
+!hangman a
+!hangman guess ab12cd b
+!hangman leave ab12cd
+!hangman stop ab12cd`,
     category: "game",
     commandClass: HangmanGame,
     cooldown: 5000,

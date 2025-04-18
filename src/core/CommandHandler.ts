@@ -13,6 +13,7 @@ export interface CommandInfo {
   name: string;
   aliases?: string[];
   description: string;
+  helpText?: string; // Inline command documentation
   category: "game" | "general" | "admin" | "utility";
   commandClass: new () => CommandInterface;
   cooldown?: number;
@@ -452,32 +453,9 @@ export class CommandHandler {
     const commandInfo = this.getCommandInfo(commandName);
 
     if (!commandInfo) {
-      let helpText = "";
-
-      if (commandName === "games") {
-        helpText =
-          `*${BotConfig.prefix}games*\n` +
-          `*Deskripsi:* Menampilkan daftar game yang tersedia\n\n` +
-          `Ketik ${BotConfig.prefix}games untuk melihat semua game yang dapat dimainkan.`;
-      } else if (commandName === "stop") {
-        helpText =
-          `*${BotConfig.prefix}stop*\n` +
-          `*Deskripsi:* Menghentikan game yang sedang berjalan\n\n` +
-          `Ketik ${BotConfig.prefix}stop untuk keluar dari game yang sedang kamu mainkan.`;
-      } else if (commandName === "help") {
-        helpText =
-          `*${BotConfig.prefix}help [perintah]*\n` +
-          `*Deskripsi:* Menampilkan bantuan untuk perintah tertentu\n\n` +
-          `*Contoh:*\n` +
-          `${BotConfig.prefix}help - Menampilkan semua bantuan\n` +
-          `${BotConfig.prefix}help hangman - Bantuan untuk game Hangman`;
-      } else {
-        helpText =
-          `Perintah *${BotConfig.prefix}${args[0]}* tidak ditemukan.\n` +
-          `Gunakan ${BotConfig.prefix}help untuk melihat daftar perintah yang tersedia.`;
-      }
-
-      await sock.sendMessage(jid, { text: helpText });
+      await sock.sendMessage(jid, {
+        text: `Perintah *${BotConfig.prefix}${args[0]}* tidak ditemukan.\nGunakan ${BotConfig.prefix}help untuk melihat daftar perintah yang tersedia.`,
+      });
       return;
     }
 
@@ -492,49 +470,8 @@ export class CommandHandler {
       `*${BotConfig.prefix}${commandInfo.name}*${aliasText}\n` +
       `*Deskripsi:* ${commandInfo.description}\n\n`;
 
-    if (commandInfo.category === "game") {
-      helpText += `*Cara bermain:*\n`;
-
-      switch (commandInfo.name) {
-        case "hangman":
-          helpText +=
-            `1. Ketik ${BotConfig.prefix}hangman start untuk memulai permainan baru\n` +
-            `2. Bot akan menampilkan kata yang harus ditebak (tersembunyi)\n` +
-            `3. Tebak huruf satu per satu dengan mengetik ${BotConfig.prefix}hangman [huruf]\n` +
-            `4. Berhasil menebak semua huruf sebelum kesempatan habis untuk menang!\n`;
-          break;
-        case "rps":
-          helpText +=
-            `1. Ketik ${BotConfig.prefix}rps start untuk bermain dengan AI\n` +
-            `2. Ketik ${BotConfig.prefix}rps multiplayer untuk bermain dengan pemain lain\n` +
-            `3. Pilih batu, gunting, atau kertas saat giliran bermain\n`;
-          break;
-        default:
-          helpText += `Gunakan ${BotConfig.prefix}${commandInfo.name} start untuk memulai.`;
-      }
-    } else if (commandInfo.category === "general") {
-      helpText += `*Cara penggunaan:*\n`;
-
-      switch (commandInfo.name) {
-        case "fufufafa":
-          helpText +=
-            `1. Ketik ${BotConfig.prefix}fufufafa untuk mendapatkan komentar random dari akun Kaskus Fufufafa\n` +
-            `2. Gunakan ${BotConfig.prefix}fufufafa [id] untuk mendapatkan komentar tertentu\n` +
-            `3. Gunakan ${BotConfig.prefix}fufufafa [id] imgonly untuk mendapatkan gambar saja\n` +
-            `4. Gunakan ${BotConfig.prefix}fufufafa [id] textonly untuk mendapatkan teks saja\n`;
-          break;
-        case "mplid":
-          helpText +=
-            `1. Ketik ${BotConfig.prefix}mplid teams untuk melihat daftar tim MPLID\n` +
-            `2. Ketik ${BotConfig.prefix}mplid schedule untuk melihat jadwal MPLID\n` +
-            `3. Ketik ${BotConfig.prefix}mplid standings untuk melihat klasemen MPLID\n` +
-            `4. Ketik ${BotConfig.prefix}mplid team [team_id] untuk melihat informasi tim berdasarkan ID (ID Tim adalah singkatan nama tiap tim, contoh: "alter ego esports" memiliki ID "ae")\n`;
-          break;
-        default:
-          helpText += `Gunakan ${BotConfig.prefix}${commandInfo.name} untuk menjalankan perintah ini.`;
-      }
-    } else {
-      helpText += `Gunakan ${BotConfig.prefix}${commandInfo.name} untuk menjalankan perintah ini.`;
+    if (commandInfo.helpText) {
+      helpText += commandInfo.helpText;
     }
 
     await sock.sendMessage(jid, { text: helpText });
