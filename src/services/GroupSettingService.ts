@@ -1,4 +1,5 @@
 import { MongoClient, Collection } from "mongodb";
+import { BotConfig } from "../core/config.js";
 
 export interface GroupSetting {
   group: string; // WhatsApp group JID
@@ -13,7 +14,7 @@ export class GroupSettingService {
 
   constructor(
     mongoClient: MongoClient,
-    dbName = "whatsapp_funbot",
+    dbName = BotConfig.sessionName,
     collectionName = "group_settings"
   ) {
     this.collection = mongoClient.db(dbName).collection(collectionName);

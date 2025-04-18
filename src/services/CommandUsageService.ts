@@ -1,4 +1,5 @@
 import { MongoClient, Collection, Document } from "mongodb";
+import { BotConfig } from "../core/config.js";
 
 export interface CommandUsage {
   command: string;
@@ -12,7 +13,7 @@ export class CommandUsageService {
 
   constructor(
     mongoClient: MongoClient,
-    dbName = "whatsapp_funbot",
+    dbName = BotConfig.sessionName,
     collectionName = "command_usage"
   ) {
     this.collection = mongoClient.db(dbName).collection(collectionName);

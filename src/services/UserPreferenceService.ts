@@ -1,4 +1,5 @@
 import { MongoClient, Collection } from "mongodb";
+import { BotConfig } from "../core/config.js";
 
 export interface UserPreference {
   user: string; // WhatsApp JID
@@ -13,7 +14,7 @@ export class UserPreferenceService {
 
   constructor(
     mongoClient: MongoClient,
-    dbName = "whatsapp_funbot",
+    dbName = BotConfig.sessionName,
     collectionName = "user_preferences"
   ) {
     this.collection = mongoClient.db(dbName).collection(collectionName);

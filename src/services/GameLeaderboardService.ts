@@ -1,4 +1,5 @@
 import { MongoClient, Collection } from "mongodb";
+import { BotConfig } from "../core/config.js";
 
 export interface GameStat {
   user: string; // WhatsApp JID
@@ -15,7 +16,7 @@ export class GameLeaderboardService {
 
   constructor(
     mongoClient: MongoClient,
-    dbName = "whatsapp_funbot",
+    dbName = BotConfig.sessionName,
     collectionName = "game_leaderboards"
   ) {
     this.collection = mongoClient.db(dbName).collection(collectionName);
