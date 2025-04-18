@@ -69,7 +69,7 @@ export class MPLIDInfo implements CommandInterface {
           text: `Jadwal MPLID Week ${currentWeek}:\n${scheduleText}`,
         });
         return;
-      } else if (args[0] === "standings") {
+      } else if (subCommand === "standings") {
         const standings = await getStandings();
         const standingsList = standings.data.map(
           (team) =>
