@@ -1,6 +1,15 @@
 import { MongoClient } from "mongodb";
 import { CommandUsageService } from "../services/CommandUsageService.js";
-import { makeWASocket, DisconnectReason, AuthenticationState } from "baileys";
+import {
+  makeWASocket,
+  DisconnectReason,
+  AuthenticationState,
+  Browsers,
+  isJidBroadcast,
+  makeInMemoryStore,
+  fetchLatestBaileysVersion,
+  proto,
+} from "baileys";
 import { CommandHandler } from "./CommandHandler.js";
 import { SessionService } from "../services/SessionService.js";
 import { BotConfig } from "./config.js";
@@ -33,6 +42,7 @@ export class BotClient {
   } | null = null;
   private usageService: CommandUsageService | null = null;
   private mongoClient: MongoClient | null = null;
+  private store = makeInMemoryStore({ logger });
 
   constructor() {
     this.sessionService = new SessionService();
@@ -61,6 +71,9 @@ export class BotClient {
             : undefined,
           process.env.NODE_ENV !== "production" ? "auth_dev_" : undefined
         );
+
+        const { version } = await fetchLatestBaileysVersion();
+
         const { state } = this.authState;
 
         // Create a new socket connection
@@ -68,10 +81,27 @@ export class BotClient {
           auth: state,
           printQRInTerminal: true,
           logger,
+          version,
           syncFullHistory: false,
           connectTimeoutMs: 60000, // Allow more time for initial connection
           keepAliveIntervalMs: 10000, // More frequent keep-alive pings
           retryRequestDelayMs: 2000, // Retry delay for failed requests
+          shouldIgnoreJid: (jid) => isJidBroadcast(jid),
+          browser: Browsers.macOS("Desktop"),
+          patchMessageBeforeSending: (message, jids) => {
+            // The function should only return the modified message, not an array
+            // We'll just keep the original message unchanged
+            return message;
+          },
+          getMessage: async (key) => {
+            if (this.store) {
+              const msg = await this.store.loadMessage(key.remoteJid!, key.id!);
+              return msg?.message || undefined;
+            }
+
+            // Only if store is present
+            return proto.Message.fromObject({});
+          },
         });
 
         this.botId = this.sock.authState.creds.me?.id.split(":")[0] || null;
@@ -85,6 +115,8 @@ export class BotClient {
         setTimeout(() => this.start(), RECONNECT_INTERVAL);
         return;
       }
+
+      this.store.bind(this.sock.ev);
 
       // Handle connection updates
       this.sock.ev.on("connection.update", (update) => {
