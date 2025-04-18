@@ -36,7 +36,7 @@ export class MPLIDInfo implements CommandInterface {
       } else if (subCommand === "teams") {
         const teams = await getAllTeams();
         const teamList = teams.data
-          .map((team) => `${team.id}: ${team.name}`)
+          .map((team, i) => `${i + 1}: ${team.name}`)
           .join("\n");
         await sock.sendMessage(jid, {
           text: `Daftar Tim MPLID:\n${teamList}`,
