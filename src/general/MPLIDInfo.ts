@@ -20,7 +20,7 @@ export class MPLIDInfo implements CommandInterface {
     msg: proto.IWebMessageInfo
   ): Promise<void> {
     try {
-      const subCommand = args[0].toLowerCase();
+      const subCommand = args[0]?.toLowerCase();
       const helpMessage = `Perintah MPLID Info:
 - ${BotConfig.prefix}mplid teams: Menampilkan semua tim MPLID
 - ${BotConfig.prefix}mplid schedule: Menampilkan jadwal MPLID
@@ -36,7 +36,7 @@ export class MPLIDInfo implements CommandInterface {
       } else if (subCommand === "teams") {
         const teams = await getAllTeams();
         const teamList = teams.data
-          .map((team) => `${team.id}: ${team.name}`)
+          .map((team, i) => `${i + 1}: ${team.name}`)
           .join("\n");
         await sock.sendMessage(jid, {
           text: `Daftar Tim MPLID:\n${teamList}`,
@@ -95,7 +95,7 @@ export class MPLIDInfo implements CommandInterface {
               .join("\n") || "Tidak ada pemain.";
           const teamInfo = `ID: ${team.id.toUpperCase()}\nNama: ${
             team.name
-          }\n\n${playerList}`;
+          }\n\nPemain:\n${playerList}`;
           if (!team.logo) {
             await sock.sendMessage(jid, {
               text: `Informasi Tim:\n${teamInfo}`,
