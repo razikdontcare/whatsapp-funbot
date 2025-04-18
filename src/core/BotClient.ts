@@ -18,6 +18,7 @@ import { log } from "./config.js";
 import { useMongoDBAuthState } from "./auth.js";
 import MAIN_LOGGER from "baileys/lib/Utils/logger.js";
 import { getMongoClient } from "./mongo.js";
+import NodeCache from "node-cache";
 
 const logger = MAIN_LOGGER.default.child({});
 logger.level = "silent";
@@ -42,6 +43,7 @@ export class BotClient {
   private usageService: CommandUsageService | null = null;
   private mongoClient: MongoClient | null = null;
   private store = makeInMemoryStore({ logger });
+  private groupCache = new NodeCache({});
 
   constructor() {
     this.sessionService = new SessionService();
@@ -101,6 +103,7 @@ export class BotClient {
             // Only if store is present
             return proto.Message.fromObject({});
           },
+          cachedGroupMetadata: async (jid) => this.groupCache.get(jid),
         });
 
         this.botId = this.sock.authState.creds.me?.id.split(":")[0] || null;
