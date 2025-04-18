@@ -11,6 +11,25 @@ import {
 } from "../utils/mplid.js";
 
 export class MPLIDInfo implements CommandInterface {
+  static commandInfo = {
+    name: "mplid",
+    description: "Informasi tentang MPL Indonesia (MPLID)",
+    helpText: `*Penggunaan:*
+• !mplid teams — Menampilkan semua tim MPLID
+• !mplid schedule — Menampilkan jadwal MPLID
+• !mplid standings — Menampilkan klasemen MPLID
+• !mplid team <team_id> — Menampilkan info tim berdasarkan ID
+
+*Contoh:*
+!mplid teams
+!mplid team ae
+
+ID Tim adalah singkatan nama tiap tim, contoh: "alter ego esports" memiliki ID "ae".`,
+    category: "general",
+    commandClass: MPLIDInfo,
+    cooldown: 5000,
+    maxUses: 3,
+  };
   async handleCommand(
     args: string[],
     jid: string,

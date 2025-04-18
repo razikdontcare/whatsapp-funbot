@@ -1,3 +1,5 @@
+import { MongoClient } from "mongodb";
+import { CommandUsageService } from "../services/CommandUsageService.js";
 import { makeWASocket, DisconnectReason, AuthenticationState } from "baileys";
 import { CommandHandler } from "./CommandHandler.js";
 import { SessionService } from "../services/SessionService.js";
@@ -7,6 +9,7 @@ import { Boom } from "@hapi/boom";
 import { log } from "./config.js";
 import { useMongoDBAuthState } from "./auth.js";
 import MAIN_LOGGER from "baileys/lib/Utils/logger.js";
+import { getMongoClient } from "./mongo.js";
 
 const logger = MAIN_LOGGER.default.child({});
 logger.level = "silent";
@@ -28,6 +31,8 @@ export class BotClient {
     removeCreds: () => Promise<void>;
     close: () => Promise<void>;
   } | null = null;
+  private usageService: CommandUsageService | null = null;
+  private mongoClient: MongoClient | null = null;
 
   constructor() {
     this.sessionService = new SessionService();
@@ -37,21 +42,31 @@ export class BotClient {
   async start() {
     try {
       // Close previous auth if exists
-      if (this.authState) {
-        await this.authState
-          .close()
-          .catch((err) => log.error("Error closing previous auth state:", err));
-      }
+      // if (this.authState) {
+      //   await this.authState
+      //     .close()
+      //     .catch((err) => log.error("Error closing previous auth state:", err));
+      // }
 
       // Connect to MongoDB and initialize auth state
       log.info("Initializing WhatsApp connection...");
       try {
+        // Use shared MongoClient for usage stats and auth
+        this.mongoClient = await getMongoClient();
+        this.usageService = new CommandUsageService(this.mongoClient);
+        if (this.usageService) {
+          this.commandHandler = new CommandHandler(
+            this.sessionService,
+            this.usageService
+          );
+        }
+        await this.commandHandler.registerCommands();
         this.authState = await useMongoDBAuthState(
-          process.env.MONGO_URI!,
+          // process.env.MONGO_URI!,
           process.env.NODE_ENV !== "production"
-            ? "baileys_auth_dev"
+            ? `${BotConfig.sessionName}_dev`
             : undefined,
-          process.env.NODE_ENV !== "production" ? "baileys_dev_" : undefined
+          process.env.NODE_ENV !== "production" ? "auth_dev_" : undefined
         );
         const { state } = this.authState;
 
@@ -67,6 +82,10 @@ export class BotClient {
         });
 
         this.botId = this.sock.authState.creds.me?.id.split(":")[0] || null;
+        this.commandHandler = new CommandHandler(
+          this.sessionService,
+          this.usageService
+        );
       } catch (error) {
         log.error("Failed to initialize WhatsApp session:", error);
         // Wait before trying to reconnect

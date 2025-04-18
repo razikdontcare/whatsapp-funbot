@@ -1,23 +1,28 @@
 import { CommandInterface } from "./CommandInterface.js";
 import { SessionService } from "../services/SessionService.js";
-import { BotConfig, log } from "./config.js";
+import { CommandUsageService } from "../services/CommandUsageService.js";
+import { BotConfig, log, getUserRoles } from "./config.js";
 import { WebSocketInfo } from "./types.js";
 import { CooldownManager } from "./CooldownManager.js";
-
-import { HangmanGame } from "../games/HangmanGame.js";
-import { RockPaperScissorsGame } from "../games/RockPaperScissorsGame.js";
-import { FufufafaComments } from "../general/FufufafaComments.js";
-import { MPLIDInfo } from "../general/MPLIDInfo.js";
 import { proto } from "baileys";
+
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export interface CommandInfo {
   name: string;
   aliases?: string[];
   description: string;
+  helpText?: string; // Inline command documentation
   category: "game" | "general" | "admin" | "utility";
   commandClass: new () => CommandInterface;
-  cooldown?: number; // Cooldown in milliseconds
-  maxUses?: number; // Maximum uses before cooldown triggers
+  cooldown?: number;
+  maxUses?: number;
+  requiredRoles?: import("./config.js").UserRole[];
 }
 
 export class CommandHandler {
@@ -25,49 +30,26 @@ export class CommandHandler {
   private aliases: Map<string, string> = new Map();
   private cooldownManager: CooldownManager = new CooldownManager();
 
-  constructor(private sessionService: SessionService) {
-    this.registerCommands();
+  constructor(
+    private sessionService: SessionService,
+    private usageService?: CommandUsageService
+  ) {
+    // this.registerCommands();
     setInterval(() => this.sessionService.cleanupExpiredSessions(), 1800000); // 30 minutes
   }
 
-  private registerCommands() {
-    this.registerCommand({
-      name: "hangman",
-      aliases: ["hm", "tebakkata"],
-      description:
-        "Game tebak kata. Tebak huruf untuk menemukan kata yang tersembunyi.",
-      category: "game",
-      commandClass: HangmanGame,
-      cooldown: 5000,
-    });
-
-    this.registerCommand({
-      name: "rps",
-      aliases: [],
-      description: "Batu-Gunting-Kertas (vs AI/Multiplayer)",
-      category: "game",
-      commandClass: RockPaperScissorsGame,
-      cooldown: 3000,
-    });
-
-    this.registerCommand({
-      name: "fufufafa",
-      description:
-        "Komentar random dari akun Kaskus Fufufafa. (Total 699 komentar)",
-      category: "general",
-      commandClass: FufufafaComments,
-      cooldown: 10000,
-      maxUses: 3,
-    });
-
-    this.registerCommand({
-      name: "mplid",
-      description: "Informasi tentang MPL Indonesia (MPLID)",
-      category: "general",
-      commandClass: MPLIDInfo,
-      cooldown: 5000,
-      maxUses: 3,
-    });
+  async registerCommands() {
+    const commandsDir = path.resolve(__dirname, "../commands");
+    const files = fs.readdirSync(commandsDir).filter((f) => f.endsWith(".js"));
+    // .filter((f) => f.endsWith(".ts") || f.endsWith(".js"));
+    for (const file of files) {
+      const commandModule = await import(path.join(commandsDir, file));
+      // Support both default and named exports
+      const CommandClass =
+        commandModule.default || Object.values(commandModule)[0];
+      if (!CommandClass || !CommandClass.commandInfo) continue;
+      this.registerCommand(CommandClass.commandInfo);
+    }
   }
 
   private registerCommand(info: CommandInfo): void {
@@ -167,9 +149,27 @@ export class CommandHandler {
         return;
       }
 
-      const commandInfo = this.getCommandInfo(command);
+      if (command === "stats" && this.usageService) {
+        await this.handleStatsCommand(jid, sock, user, args);
+        return;
+      }
 
+      const commandInfo = this.getCommandInfo(command);
       if (commandInfo) {
+        // Permission check for requiredRoles (type-safe, supports multiple roles)
+        if (commandInfo.requiredRoles && commandInfo.requiredRoles.length > 0) {
+          const userRoles = getUserRoles(user);
+          const hasRole = commandInfo.requiredRoles.some((role) =>
+            userRoles.includes(role)
+          );
+          if (!hasRole) {
+            await sock.sendMessage(jid, {
+              text: `${BotConfig.emoji.error} Kamu tidak memiliki izin untuk menggunakan perintah ini.`,
+            });
+            return;
+          }
+        }
+
         const actualCommand = commandInfo.name;
 
         if (commandInfo.cooldown) {
@@ -194,6 +194,11 @@ export class CommandHandler {
             });
             return;
           }
+        }
+
+        // Increment usage stats if service is available
+        if (this.usageService) {
+          await this.usageService.increment(commandInfo.name, user);
         }
 
         if (commandInfo.category === "game") {
@@ -451,32 +456,9 @@ export class CommandHandler {
     const commandInfo = this.getCommandInfo(commandName);
 
     if (!commandInfo) {
-      let helpText = "";
-
-      if (commandName === "games") {
-        helpText =
-          `*${BotConfig.prefix}games*\n` +
-          `*Deskripsi:* Menampilkan daftar game yang tersedia\n\n` +
-          `Ketik ${BotConfig.prefix}games untuk melihat semua game yang dapat dimainkan.`;
-      } else if (commandName === "stop") {
-        helpText =
-          `*${BotConfig.prefix}stop*\n` +
-          `*Deskripsi:* Menghentikan game yang sedang berjalan\n\n` +
-          `Ketik ${BotConfig.prefix}stop untuk keluar dari game yang sedang kamu mainkan.`;
-      } else if (commandName === "help") {
-        helpText =
-          `*${BotConfig.prefix}help [perintah]*\n` +
-          `*Deskripsi:* Menampilkan bantuan untuk perintah tertentu\n\n` +
-          `*Contoh:*\n` +
-          `${BotConfig.prefix}help - Menampilkan semua bantuan\n` +
-          `${BotConfig.prefix}help hangman - Bantuan untuk game Hangman`;
-      } else {
-        helpText =
-          `Perintah *${BotConfig.prefix}${args[0]}* tidak ditemukan.\n` +
-          `Gunakan ${BotConfig.prefix}help untuk melihat daftar perintah yang tersedia.`;
-      }
-
-      await sock.sendMessage(jid, { text: helpText });
+      await sock.sendMessage(jid, {
+        text: `Perintah *${BotConfig.prefix}${args[0]}* tidak ditemukan.\nGunakan ${BotConfig.prefix}help untuk melihat daftar perintah yang tersedia.`,
+      });
       return;
     }
 
@@ -491,51 +473,60 @@ export class CommandHandler {
       `*${BotConfig.prefix}${commandInfo.name}*${aliasText}\n` +
       `*Deskripsi:* ${commandInfo.description}\n\n`;
 
-    if (commandInfo.category === "game") {
-      helpText += `*Cara bermain:*\n`;
-
-      switch (commandInfo.name) {
-        case "hangman":
-          helpText +=
-            `1. Ketik ${BotConfig.prefix}hangman start untuk memulai permainan baru\n` +
-            `2. Bot akan menampilkan kata yang harus ditebak (tersembunyi)\n` +
-            `3. Tebak huruf satu per satu dengan mengetik ${BotConfig.prefix}hangman [huruf]\n` +
-            `4. Berhasil menebak semua huruf sebelum kesempatan habis untuk menang!\n`;
-          break;
-        case "rps":
-          helpText +=
-            `1. Ketik ${BotConfig.prefix}rps start untuk bermain dengan AI\n` +
-            `2. Ketik ${BotConfig.prefix}rps multiplayer untuk bermain dengan pemain lain\n` +
-            `3. Pilih batu, gunting, atau kertas saat giliran bermain\n`;
-          break;
-        default:
-          helpText += `Gunakan ${BotConfig.prefix}${commandInfo.name} start untuk memulai.`;
-      }
-    } else if (commandInfo.category === "general") {
-      helpText += `*Cara penggunaan:*\n`;
-
-      switch (commandInfo.name) {
-        case "fufufafa":
-          helpText +=
-            `1. Ketik ${BotConfig.prefix}fufufafa untuk mendapatkan komentar random dari akun Kaskus Fufufafa\n` +
-            `2. Gunakan ${BotConfig.prefix}fufufafa [id] untuk mendapatkan komentar tertentu\n` +
-            `3. Gunakan ${BotConfig.prefix}fufufafa [id] imgonly untuk mendapatkan gambar saja\n` +
-            `4. Gunakan ${BotConfig.prefix}fufufafa [id] textonly untuk mendapatkan teks saja\n`;
-          break;
-        case "mplid":
-          helpText +=
-            `1. Ketik ${BotConfig.prefix}mplid teams untuk melihat daftar tim MPLID\n` +
-            `2. Ketik ${BotConfig.prefix}mplid schedule untuk melihat jadwal MPLID\n` +
-            `3. Ketik ${BotConfig.prefix}mplid standings untuk melihat klasemen MPLID\n` +
-            `4. Ketik ${BotConfig.prefix}mplid team [team_id] untuk melihat informasi tim berdasarkan ID (ID Tim adalah singkatan nama tiap tim, contoh: "alter ego esports" memiliki ID "ae")\n`;
-          break;
-        default:
-          helpText += `Gunakan ${BotConfig.prefix}${commandInfo.name} untuk menjalankan perintah ini.`;
-      }
-    } else {
-      helpText += `Gunakan ${BotConfig.prefix}${commandInfo.name} untuk menjalankan perintah ini.`;
+    if (commandInfo.helpText) {
+      helpText += commandInfo.helpText;
     }
 
     await sock.sendMessage(jid, { text: helpText });
+  }
+
+  private async handleStatsCommand(
+    jid: string,
+    sock: WebSocketInfo,
+    user: string,
+    args: string[]
+  ) {
+    if (!this.usageService) {
+      await sock.sendMessage(jid, { text: "Statistik tidak tersedia." });
+      return;
+    }
+    let statsText = "";
+    if (args.length > 0) {
+      // Show stats for a specific command
+      const command = args[0].toLowerCase();
+      const stats = await this.usageService.getCommandStats(command);
+      if (stats.length === 0) {
+        statsText = `Belum ada statistik untuk perintah *${command}*.`;
+      } else {
+        statsText =
+          `Statistik penggunaan *${command}*:\n` +
+          stats
+            .map(
+              (s, i) =>
+                `${i + 1}. ${s.user}: ${
+                  s.count
+                }x (terakhir: ${s.lastUsed.toLocaleString()})`
+            )
+            .join("\n");
+      }
+    } else {
+      // Show global stats
+      const allStats = await this.usageService.getAllStats();
+      if (allStats.length === 0) {
+        statsText = "Belum ada statistik penggunaan perintah.";
+      } else {
+        // Aggregate by command
+        const byCommand: Record<string, number> = {};
+        for (const s of allStats) {
+          byCommand[s.command] = (byCommand[s.command] || 0) + s.count;
+        }
+        statsText =
+          "Statistik penggunaan perintah:\n" +
+          Object.entries(byCommand)
+            .map(([cmd, count], i) => `${i + 1}. *${cmd}*: ${count}x`)
+            .join("\n");
+      }
+    }
+    await sock.sendMessage(jid, { text: statsText });
   }
 }

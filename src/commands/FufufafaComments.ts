@@ -13,6 +13,26 @@ import { proto } from "baileys";
 const IMAGE_QUALITY = 80;
 
 export class FufufafaComments implements CommandInterface {
+  static commandInfo = {
+    name: "fufufafa",
+    description:
+      "Komentar random dari akun Kaskus Fufufafa. (Total 699 komentar)",
+    helpText: `*Penggunaan:*
+• !fufufafa — Mendapatkan komentar random
+• !fufufafa <id> — Mendapatkan komentar berdasarkan ID
+• !fufufafa <id> imgonly — Hanya gambar
+• !fufufafa <id> textonly — Hanya teks
+
+*Contoh:*
+!fufufafa
+!fufufafa 123
+!fufufafa 123 imgonly`,
+    category: "general",
+    commandClass: FufufafaComments,
+    cooldown: 10000,
+    maxUses: 3,
+  };
+
   async handleCommand(
     args: string[],
     jid: string,

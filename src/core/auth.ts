@@ -6,7 +6,8 @@ import baileys, {
   SignalDataTypeMap,
   SignalDataSet,
 } from "baileys";
-import { log } from "./config.js";
+import { BotConfig, log } from "./config.js";
+import { getMongoClient } from "./mongo.js";
 
 const { proto, initAuthCreds } = baileys;
 
@@ -16,9 +17,9 @@ interface AuthDocument {
 }
 
 export const useMongoDBAuthState = async (
-  mongoUri: string,
-  dbName: string = "baileys_auth",
-  collectionPrefix: string = "baileys_"
+  // mongoUri: string,
+  dbName: string = BotConfig.sessionName,
+  collectionPrefix: string = "auth_"
 ): Promise<{
   state: AuthenticationState;
   saveCreds: () => Promise<void>;
@@ -27,22 +28,23 @@ export const useMongoDBAuthState = async (
 }> => {
   log.debug("Connecting to " + dbName + " database");
   log.debug("Using collection prefix: " + collectionPrefix);
-  // Connect with timeout and retry options
-  const client = new MongoClient(mongoUri, {
-    connectTimeoutMS: 10000,
-    socketTimeoutMS: 10000,
-  });
-
-  try {
-    await client.connect();
+  // Use provided client or create a new one
+  let client: MongoClient | null = null;
+  if (!client) {
+    client = await getMongoClient();
     log.info("MongoDB connection established successfully");
-  } catch (error) {
-    log.error("MongoDB connection error:", error);
-    throw new Error(
-      "Failed to connect to MongoDB. Check your connection string and network."
-    );
   }
-
+  // if (!client) {
+  //   try {
+  //     await client.connect();
+  //     log.info("MongoDB connection established successfully");
+  //   } catch (error) {
+  //     log.error("MongoDB connection error:", error);
+  //     throw new Error(
+  //       "Failed to connect to MongoDB. Check your connection string and network."
+  //     );
+  //   }
+  // }
   const db = client.db(dbName);
   const collections = {
     creds: db.collection<AuthDocument>(`${collectionPrefix}creds`),
@@ -268,7 +270,8 @@ export const useMongoDBAuthState = async (
     },
     close: async () => {
       try {
-        await client.close();
+        await client?.close();
+        client = null; // Clear the client reference
         log.info("MongoDB connection closed");
       } catch (error) {
         log.error("Error closing MongoDB connection:", error);
