@@ -1,15 +1,14 @@
 import { MongoClient } from "mongodb";
 import { CommandUsageService } from "../services/CommandUsageService.js";
-import {
+import wa, {
   makeWASocket,
   DisconnectReason,
   AuthenticationState,
-  Browsers,
   isJidBroadcast,
   makeInMemoryStore,
   fetchLatestBaileysVersion,
-  proto,
 } from "baileys";
+const { proto, Browsers } = wa;
 import { CommandHandler } from "./CommandHandler.js";
 import { SessionService } from "../services/SessionService.js";
 import { BotConfig } from "./config.js";
