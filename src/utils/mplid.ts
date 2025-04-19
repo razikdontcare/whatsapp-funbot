@@ -95,14 +95,25 @@ export async function getAllTeams(): Promise<ApiResponse<TeamData[]>> {
   }
 }
 
+// Overloads for getTeamById
+export async function getTeamById(id: string, image: true): Promise<Buffer>;
+export async function getTeamById(
+  id: string,
+  image?: false
+): Promise<ApiResponse<TeamData>>;
 export async function getTeamById(
   id: string,
   image?: boolean
-): Promise<ApiResponse<TeamData>> {
+): Promise<ApiResponse<TeamData> | Buffer> {
   try {
-    const response = await mplidClient.get<ApiResponse<TeamData>>(
-      `/api/teams/${id}${image ? "/image" : ""}`
+    const config = image ? { responseType: "arraybuffer" as const } : undefined;
+    const response = await mplidClient.get(
+      `/api/teams/${id}${image ? "/image" : ""}`,
+      config
     );
+    if (image) {
+      return Buffer.from(response.data);
+    }
     return response.data;
   } catch (error) {
     log.error("Error fetching team by ID:", error);
@@ -110,13 +121,23 @@ export async function getTeamById(
   }
 }
 
+// Overloads for getSchedules
+export async function getSchedules(image: true): Promise<Buffer>;
+export async function getSchedules(
+  image?: false
+): Promise<ApiResponse<WeekData[]>>;
 export async function getSchedules(
   image?: boolean
-): Promise<ApiResponse<WeekData[]>> {
+): Promise<ApiResponse<WeekData[]> | Buffer> {
   try {
-    const response = await mplidClient.get<ApiResponse<WeekData[]>>(
-      "/api/schedules" + (image ? "/image" : "")
+    const config = image ? { responseType: "arraybuffer" as const } : undefined;
+    const response = await mplidClient.get(
+      "/api/schedules" + (image ? "/image" : ""),
+      config
     );
+    if (image) {
+      return Buffer.from(response.data);
+    }
     return response.data;
   } catch (error) {
     log.error("Error fetching schedules:", error);
@@ -124,13 +145,23 @@ export async function getSchedules(
   }
 }
 
+// Overloads for getStandings
+export async function getStandings(image: true): Promise<Buffer>;
+export async function getStandings(
+  image?: false
+): Promise<ApiResponse<StandingData[]>>;
 export async function getStandings(
   image?: boolean
-): Promise<ApiResponse<StandingData[]>> {
+): Promise<ApiResponse<StandingData[]> | Buffer> {
   try {
-    const response = await mplidClient.get<ApiResponse<StandingData[]>>(
-      "/api/standings" + (image ? "/image" : "")
+    const config = image ? { responseType: "arraybuffer" as const } : undefined;
+    const response = await mplidClient.get(
+      "/api/standings" + (image ? "/image" : ""),
+      config
     );
+    if (image) {
+      return Buffer.from(response.data);
+    }
     return response.data;
   } catch (error) {
     log.error("Error fetching standings:", error);

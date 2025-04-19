@@ -62,40 +62,46 @@ ID Tim adalah singkatan nama tiap tim, contoh: "alter ego esports" memiliki ID "
         });
         return;
       } else if (subCommand === "schedule") {
-        const schedules = await getSchedules();
-        const scheduleData = schedules.data[0];
-        const currentWeek = scheduleData.week;
-        const scheduleList = scheduleData.schedules;
-        const scheduleText = scheduleList
-          .map((schedule) => {
-            const matches = schedule.matches
-              .map(
-                (match, j) =>
-                  `${j + 1}. ${match.homeTeam.name} vs ${
-                    match.awayTeam.name
-                  }\n${new Date(match.schedule).toLocaleString()}\nStatus: ${
-                    match.status
-                  }`
-              )
-              .join("\n\n");
-            return `Hari ${schedule.day} (${new Date(
-              schedule.date
-            ).toLocaleDateString()}):\n\n${matches}`;
-          })
-          .join("\n\n");
+        const schedules = await getSchedules(true);
+        // const scheduleData = schedules.data[0];
+        // const currentWeek = scheduleData.week;
+        // const scheduleList = scheduleData.schedules;
+        // const scheduleText = scheduleList
+        //   .map((schedule) => {
+        //     const matches = schedule.matches
+        //       .map(
+        //         (match, j) =>
+        //           `${j + 1}. ${match.homeTeam.name} vs ${
+        //             match.awayTeam.name
+        //           }\n${new Date(match.schedule).toLocaleString()}\nStatus: ${
+        //             match.status
+        //           }`
+        //       )
+        //       .join("\n\n");
+        //     return `Hari ${schedule.day} (${new Date(
+        //       schedule.date
+        //     ).toLocaleDateString()}):\n\n${matches}`;
+        //   })
+        //   .join("\n\n");
 
+        // await sock.sendMessage(jid, {
+        //   text: `Jadwal MPLID Week ${currentWeek}:\n${scheduleText}`,
+        // });
         await sock.sendMessage(jid, {
-          text: `Jadwal MPLID Week ${currentWeek}:\n${scheduleText}`,
+          image: Buffer.from(schedules),
         });
         return;
       } else if (subCommand === "standings") {
-        const standings = await getStandings();
-        const standingsList = standings.data.map(
-          (team) =>
-            `${team.position}. ${team.team.name}\nMatch Point: ${team.match.points}\nMatch W-L: ${team.match.win} - ${team.match.lose}\nNet Game Win: ${team.game.net}\nGame W-L: ${team.game.win} - ${team.game.lose}`
-        );
+        const standings = await getStandings(true);
+        // const standingsList = standings.data.map(
+        //   (team) =>
+        //     `${team.position}. ${team.team.name}\nMatch Point: ${team.match.points}\nMatch W-L: ${team.match.win} - ${team.match.lose}\nNet Game Win: ${team.game.net}\nGame W-L: ${team.game.win} - ${team.game.lose}`
+        // );
+        // await sock.sendMessage(jid, {
+        //   text: `Klasemen MPLID:\n${standingsList.join("\n\n")}`,
+        // });
         await sock.sendMessage(jid, {
-          text: `Klasemen MPLID:\n${standingsList.join("\n\n")}`,
+          image: Buffer.from(standings),
         });
         return;
       } else if (subCommand === "team") {
@@ -106,24 +112,28 @@ ID Tim adalah singkatan nama tiap tim, contoh: "alter ego esports" memiliki ID "
           });
           return;
         }
-        const team = (await getTeamById(teamId)).data;
+        // const team = (await getTeamById(teamId)).data;
+        const team = await getTeamById(teamId, true);
         if (team) {
-          const playerList =
-            team.players
-              ?.map((player, i) => `${i + 1}. ${player.name} - ${player.role}`)
-              .join("\n") || "Tidak ada pemain.";
-          const teamInfo = `ID: ${team.id.toUpperCase()}\nNama: ${
-            team.name
-          }\n\nPemain:\n${playerList}`;
-          if (!team.logo) {
-            await sock.sendMessage(jid, {
-              text: `Informasi Tim:\n${teamInfo}`,
-            });
-            return;
-          }
+          // const playerList =
+          //   team.players
+          //     ?.map((player, i) => `${i + 1}. ${player.name} - ${player.role}`)
+          //     .join("\n") || "Tidak ada pemain.";
+          // const teamInfo = `ID: ${team.id.toUpperCase()}\nNama: ${
+          //   team.name
+          // }\n\nPemain:\n${playerList}`;
+          // if (!team.logo) {
+          //   await sock.sendMessage(jid, {
+          //     text: `Informasi Tim:\n${teamInfo}`,
+          //   });
+          //   return;
+          // }
+          // await sock.sendMessage(jid, {
+          //   image: { url: team.logo },
+          //   caption: `Informasi Tim:\n${teamInfo}`,
+          // });
           await sock.sendMessage(jid, {
-            image: { url: team.logo },
-            caption: `Informasi Tim:\n${teamInfo}`,
+            image: Buffer.from(team),
           });
         } else {
           await sock.sendMessage(jid, {
