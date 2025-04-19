@@ -95,10 +95,13 @@ export async function getAllTeams(): Promise<ApiResponse<TeamData[]>> {
   }
 }
 
-export async function getTeamById(id: string): Promise<ApiResponse<TeamData>> {
+export async function getTeamById(
+  id: string,
+  image?: boolean
+): Promise<ApiResponse<TeamData>> {
   try {
     const response = await mplidClient.get<ApiResponse<TeamData>>(
-      `/api/teams/${id}`
+      `/api/teams/${id}${image ? "/image" : ""}`
     );
     return response.data;
   } catch (error) {
@@ -107,10 +110,12 @@ export async function getTeamById(id: string): Promise<ApiResponse<TeamData>> {
   }
 }
 
-export async function getSchedules(): Promise<ApiResponse<WeekData[]>> {
+export async function getSchedules(
+  image?: boolean
+): Promise<ApiResponse<WeekData[]>> {
   try {
     const response = await mplidClient.get<ApiResponse<WeekData[]>>(
-      "/api/schedules"
+      "/api/schedules" + (image ? "/image" : "")
     );
     return response.data;
   } catch (error) {
@@ -119,10 +124,12 @@ export async function getSchedules(): Promise<ApiResponse<WeekData[]>> {
   }
 }
 
-export async function getStandings(): Promise<ApiResponse<StandingData[]>> {
+export async function getStandings(
+  image?: boolean
+): Promise<ApiResponse<StandingData[]>> {
   try {
     const response = await mplidClient.get<ApiResponse<StandingData[]>>(
-      "/api/standings"
+      "/api/standings" + (image ? "/image" : "")
     );
     return response.data;
   } catch (error) {
