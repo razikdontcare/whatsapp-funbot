@@ -96,7 +96,10 @@ export async function getAllTeams(): Promise<ApiResponse<TeamData[]>> {
 }
 
 // Overloads for getTeamById
-export async function getTeamById(id: string, image: true): Promise<Buffer>;
+export async function getTeamById(
+  id: string,
+  image: true
+): Promise<Buffer | ApiResponse<TeamData>>;
 export async function getTeamById(
   id: string,
   image?: false
@@ -112,6 +115,12 @@ export async function getTeamById(
       config
     );
     if (image) {
+      const contentType = response.headers["content-type"];
+      if (contentType && contentType.includes("application/json")) {
+        // Parse buffer to string, then JSON
+        const json = JSON.parse(Buffer.from(response.data).toString("utf-8"));
+        return json;
+      }
       return Buffer.from(response.data);
     }
     return response.data;

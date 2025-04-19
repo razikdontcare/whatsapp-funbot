@@ -87,6 +87,12 @@ ID Tim adalah singkatan nama tiap tim, contoh: "alter ego esports" memiliki ID "
         // await sock.sendMessage(jid, {
         //   text: `Jadwal MPLID Week ${currentWeek}:\n${scheduleText}`,
         // });
+        if (!schedules) {
+          await sock.sendMessage(jid, {
+            text: "Jadwal tidak ditemukan.",
+          });
+          return;
+        }
         await sock.sendMessage(jid, {
           image: Buffer.from(schedules),
         });
@@ -100,6 +106,12 @@ ID Tim adalah singkatan nama tiap tim, contoh: "alter ego esports" memiliki ID "
         // await sock.sendMessage(jid, {
         //   text: `Klasemen MPLID:\n${standingsList.join("\n\n")}`,
         // });
+        if (!standings) {
+          await sock.sendMessage(jid, {
+            text: "Klasemen tidak ditemukan.",
+          });
+          return;
+        }
         await sock.sendMessage(jid, {
           image: Buffer.from(standings),
         });
@@ -112,28 +124,14 @@ ID Tim adalah singkatan nama tiap tim, contoh: "alter ego esports" memiliki ID "
           });
           return;
         }
-        // const team = (await getTeamById(teamId)).data;
         const team = await getTeamById(teamId, true);
-        if (team) {
-          // const playerList =
-          //   team.players
-          //     ?.map((player, i) => `${i + 1}. ${player.name} - ${player.role}`)
-          //     .join("\n") || "Tidak ada pemain.";
-          // const teamInfo = `ID: ${team.id.toUpperCase()}\nNama: ${
-          //   team.name
-          // }\n\nPemain:\n${playerList}`;
-          // if (!team.logo) {
-          //   await sock.sendMessage(jid, {
-          //     text: `Informasi Tim:\n${teamInfo}`,
-          //   });
-          //   return;
-          // }
-          // await sock.sendMessage(jid, {
-          //   image: { url: team.logo },
-          //   caption: `Informasi Tim:\n${teamInfo}`,
-          // });
+        if (Buffer.isBuffer(team)) {
           await sock.sendMessage(jid, {
-            image: Buffer.from(team),
+            image: team,
+          });
+        } else if (team && typeof team === "object" && "message" in team) {
+          await sock.sendMessage(jid, {
+            text: team.message || "Tim tidak ditemukan.",
           });
         } else {
           await sock.sendMessage(jid, {
