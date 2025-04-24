@@ -155,6 +155,22 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
         }
 
         const mediaUrl = await this.getMediaURL(url, service);
+        log.info("Downloading media from URL:", url);
+
+        if (!mediaUrl) {
+          await sock.sendMessage(jid, {
+            text: "Tidak ada media yang ditemukan.",
+          });
+          return;
+        }
+
+        await sock.sendMessage(
+          jid,
+          {
+            text: `Mengunduh media dari ${service}...`,
+          },
+          { quoted: msg }
+        );
 
         if (mediaUrl && mediaUrl.length > 1 && service === "tiktok.com") {
           for (const media of mediaUrl) {
@@ -208,6 +224,22 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
         }
       } else if (args.length > 0 && this.isSupportedUrl(args[0])) {
         const mediaUrl = await this.getMediaURL(url, service);
+
+        if (!mediaUrl) {
+          await sock.sendMessage(jid, {
+            text: "Tidak ada media yang ditemukan.",
+          });
+          return;
+        }
+
+        log.info("Downloading media from URL:", url);
+        await sock.sendMessage(
+          jid,
+          {
+            text: `Mengunduh media dari ${service}...`,
+          },
+          { quoted: msg }
+        );
         if (mediaUrl && mediaUrl.length > 1 && service === "tiktok.com") {
           for (const media of mediaUrl) {
             await sock.sendMessage(jid, {
@@ -219,7 +251,7 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
           mediaUrl.length === 1 &&
           service === "tiktok.com"
         ) {
-          if (mediaUrl[0].endsWith("download=true")) {
+          if (mediaUrl[0].endsWith("view=true")) {
             await sock.sendMessage(jid, {
               video: { url: mediaUrl[0] },
             });
@@ -277,7 +309,7 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
               return [
                 `${this.BASE_URL}/api/tiktok?url=${encodeURIComponent(
                   url
-                )}&download=true`,
+                )}&view=true`,
               ];
             } else {
               log.error(
