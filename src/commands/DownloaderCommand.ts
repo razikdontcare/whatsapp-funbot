@@ -104,16 +104,50 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
     sessionService: SessionService,
     msg: proto.IWebMessageInfo
   ): Promise<void> {
-    const url =
-      args[0] ||
-      extractUrlsFromText(msg.message?.extendedTextMessage?.text || "")[0];
-    if (!url) {
+    // 1. Handle help and url subcommands first
+    if (args.length > 0 && args[0] === "help") {
       await sock.sendMessage(jid, {
-        text: "Silakan masukkan URL yang valid.",
+        text: `Penggunaan: ${DownloaderCommand.commandInfo.helpText}`,
+      });
+      return;
+    }
+    if (args.length > 0 && args[0] === "url") {
+      await sock.sendMessage(jid, {
+        text: `URL yang didukung: ${this.supportedPlatforms.join(", ")}`,
       });
       return;
     }
 
+    // 2. Try to extract URL from args or quoted message
+    let url = args[0] && this.isSupportedUrl(args[0]) ? args[0] : null;
+    if (!url && msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
+      // Try to extract from quoted message text
+      const quoted = msg.message.extendedTextMessage.contextInfo.quotedMessage;
+      let quotedText = "";
+      if (quoted?.conversation) quotedText = quoted.conversation;
+      else if (quoted?.extendedTextMessage?.text)
+        quotedText = quoted.extendedTextMessage.text;
+      else if (quoted?.imageMessage?.caption)
+        quotedText = quoted.imageMessage.caption;
+      if (quotedText) {
+        const urls = extractUrlsFromText(quotedText);
+        url = urls.find((u) => this.isSupportedUrl(u)) || null;
+      }
+    }
+    // If still no URL, try to extract from the current message text
+    if (!url && msg.message?.extendedTextMessage?.text) {
+      const urls = extractUrlsFromText(msg.message.extendedTextMessage.text);
+      url = urls.find((u) => this.isSupportedUrl(u)) || null;
+    }
+
+    if (!url) {
+      await sock.sendMessage(jid, {
+        text: "Silakan masukkan URL yang valid atau balas pesan yang berisi URL.",
+      });
+      return;
+    }
+
+    // 3. Check if the URL is from a supported platform
     const service = this.supportedPlatforms.find((platform) =>
       url.includes(platform)
     );
@@ -126,160 +160,57 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
       return;
     }
 
-    if (args.length > 0 && args[0] === "help") {
+    // 4. Download and send media
+    log.info("Downloading media from URL:", url);
+    const mediaUrl = await this.getMediaURL(url, service);
+    if (!mediaUrl) {
       await sock.sendMessage(jid, {
-        text: `Penggunaan: ${DownloaderCommand.commandInfo.helpText}`,
+        text: "Tidak ada media yang ditemukan.",
       });
       return;
-    } else if (args[0] === "url") {
-      await sock.sendMessage(jid, {
-        text: `URL yang didukung: ${this.supportedPlatforms.join(", ")}`,
-      });
-      return;
-    } else if (args.length === 0) {
-      if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
-        const quotedMessage =
-          msg.message.extendedTextMessage.contextInfo.quotedMessage;
-        if (quotedMessage?.imageMessage) {
-          await sock.sendMessage(jid, {
-            text: "Silakan balas pesan yang berisi URL.",
-          });
-          return;
-        }
+    }
+    await sock.sendMessage(
+      jid,
+      {
+        text: `Mengunduh media dari ${service}...`,
+      },
+      { quoted: msg }
+    );
 
-        if (!this.isSupportedUrl(url)) {
-          await sock.sendMessage(jid, {
-            text: `URL yang didukung: ${this.supportedPlatforms.join(", ")}`,
-          });
-          return;
-        }
+    log.info(`Found ${mediaUrl.length} media URLs for ${service}`);
 
-        const mediaUrl = await this.getMediaURL(url, service);
-        log.info("Downloading media from URL:", url);
-
-        if (!mediaUrl) {
-          await sock.sendMessage(jid, {
-            text: "Tidak ada media yang ditemukan.",
-          });
-          return;
-        }
-
-        await sock.sendMessage(
-          jid,
-          {
-            text: `Mengunduh media dari ${service}...`,
-          },
-          { quoted: msg }
-        );
-
-        if (mediaUrl && mediaUrl.length > 1 && service === "tiktok.com") {
-          for (const media of mediaUrl) {
-            await sock.sendMessage(
-              jid,
-              {
-                image: { url: media },
-              },
-              { quoted: msg }
-            );
-          }
-        } else if (
-          mediaUrl &&
-          mediaUrl.length === 1 &&
-          service === "tiktok.com"
-        ) {
-          if (mediaUrl[0].endsWith("download=true")) {
-            await sock.sendMessage(
-              jid,
-              {
-                video: { url: mediaUrl[0] },
-              },
-              { quoted: msg }
-            );
-          } else {
-            await sock.sendMessage(
-              jid,
-              {
-                image: { url: mediaUrl[0] },
-              },
-              { quoted: msg }
-            );
-          }
-        } else if (
-          mediaUrl &&
-          mediaUrl.length === 1 &&
-          service === "facebook.com"
-        ) {
+    if (service === "tiktok.com") {
+      if (mediaUrl.length > 1) {
+        for (const media of mediaUrl) {
           await sock.sendMessage(
             jid,
-            {
-              video: { url: mediaUrl[0] },
-            },
+            { image: { url: media } },
             { quoted: msg }
           );
-        } else {
-          await sock.sendMessage(jid, {
-            text: "Tidak ada media yang ditemukan.",
-          });
-          return;
         }
-      } else if (args.length > 0 && this.isSupportedUrl(args[0])) {
-        const mediaUrl = await this.getMediaURL(url, service);
-
-        if (!mediaUrl) {
-          await sock.sendMessage(jid, {
-            text: "Tidak ada media yang ditemukan.",
-          });
-          return;
-        }
-
-        log.info("Downloading media from URL:", url);
+      } else if (mediaUrl[0].endsWith("view=true")) {
         await sock.sendMessage(
           jid,
-          {
-            text: `Mengunduh media dari ${service}...`,
-          },
+          { video: { url: mediaUrl[0] } },
           { quoted: msg }
         );
-        if (mediaUrl && mediaUrl.length > 1 && service === "tiktok.com") {
-          for (const media of mediaUrl) {
-            await sock.sendMessage(jid, {
-              image: { url: media },
-            });
-          }
-        } else if (
-          mediaUrl &&
-          mediaUrl.length === 1 &&
-          service === "tiktok.com"
-        ) {
-          if (mediaUrl[0].endsWith("view=true")) {
-            await sock.sendMessage(jid, {
-              video: { url: mediaUrl[0] },
-            });
-          } else {
-            await sock.sendMessage(jid, {
-              image: { url: mediaUrl[0] },
-            });
-          }
-        } else if (
-          mediaUrl &&
-          mediaUrl.length === 1 &&
-          service === "facebook.com"
-        ) {
-          await sock.sendMessage(jid, {
-            video: { url: mediaUrl[0] },
-          });
-        } else {
-          await sock.sendMessage(jid, {
-            text: "Tidak ada media yang ditemukan.",
-          });
-          return;
-        }
       } else {
-        await sock.sendMessage(jid, {
-          text: "Silakan balas pesan yang berisi URL.",
-        });
-        return;
+        await sock.sendMessage(
+          jid,
+          { image: { url: mediaUrl[0] } },
+          { quoted: msg }
+        );
       }
+    } else if (service === "facebook.com" || service === "fb.watch") {
+      await sock.sendMessage(
+        jid,
+        { video: { url: mediaUrl[0] } },
+        { quoted: msg }
+      );
+    } else {
+      await sock.sendMessage(jid, {
+        text: "Tidak ada media yang ditemukan.",
+      });
     }
   }
 
