@@ -67,6 +67,7 @@ export interface FacebookVideoQualityUrls {
 export class DownloaderCommand implements CommandInterface {
   static commandInfo = {
     name: "downloader",
+    aliases: ["dl", "download"],
     description: "Download video atau gambar dari platform yang didukung.",
     helpText: `*Penggunaan:*
 • ${BotConfig.prefix}downloader <url> — Download video atau gambar
