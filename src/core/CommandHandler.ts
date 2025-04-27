@@ -533,21 +533,30 @@ export class CommandHandler {
         }
 
         const uptimeSeconds = os.uptime();
-        const hours = Math.floor(uptimeSeconds / 3600);
+        const days = Math.floor(uptimeSeconds / 86400);
+        const hours = Math.floor((uptimeSeconds % 86400) / 3600);
         const minutes = Math.floor((uptimeSeconds % 3600) / 60);
 
+        let uptimeFormatted = [
+          days > 0 ? `${days} hari` : "",
+          hours > 0 ? `${hours} jam` : "",
+          minutes > 0 ? `${minutes} menit` : `${uptimeSeconds % 60} detik`,
+        ]
+          .filter(Boolean)
+          .join(" ");
+
         const systemStats = `System Stats:
-Hostname  : ${os.hostname()}
-Platform  : ${os.platform()}
-Uptime    : ${hours} jam ${minutes} menit
-CPU Model : ${os.cpus()[0].model}
-CPU Cores : ${os.cpus().length}
-Memory    : ${(os.freemem() / 1024 / 1024).toFixed(2)}/${(
+*Hostname*  : ${os.hostname()}
+*Platform*  : ${os.platform()}
+*Uptime*    : ${uptimeFormatted}
+*CPU Model* : ${os.cpus()[0].model}
+*CPU Cores* : ${os.cpus().length}
+*Memory*    : ${(os.freemem() / 1024 / 1024).toFixed(2)}/${(
           os.totalmem() /
           1024 /
           1024
         ).toFixed(2)} MB
-Load Avg  : ${os
+*Load Avg*  : ${os
           .loadavg()
           .map((n) => n.toFixed(2))
           .join(", ")}
