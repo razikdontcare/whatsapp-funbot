@@ -540,7 +540,7 @@ export class CommandHandler {
         let uptimeFormatted = [
           days > 0 ? `${days} hari` : "",
           hours > 0 ? `${hours} jam` : "",
-          minutes > 0 ? `${minutes} menit` : `${uptimeSeconds} detik`,
+          minutes > 0 ? `${minutes} menit` : `${uptimeSeconds % 60} detik`,
         ]
           .filter(Boolean)
           .join(" ");
