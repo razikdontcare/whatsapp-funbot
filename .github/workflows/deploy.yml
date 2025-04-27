@@ -81,6 +81,7 @@ jobs:
 
             # Run the new container with appropriate environment variables
             docker run -d --name whatsapp-funbot \
+              --hostname razikdotnet-wabot \
               --restart unless-stopped \
               -e MONGO_URI="${{ secrets.MONGO_URI }}" \
               "${IMAGE_NAME}"
