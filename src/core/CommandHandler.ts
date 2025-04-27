@@ -5,6 +5,7 @@ import { BotConfig, log, getUserRoles } from "./config.js";
 import { WebSocketInfo } from "./types.js";
 import { CooldownManager } from "./CooldownManager.js";
 import { proto } from "baileys";
+import os from "os";
 
 import fs from "fs";
 import path from "path";
@@ -530,11 +531,35 @@ export class CommandHandler {
         for (const s of allStats) {
           byCommand[s.command] = (byCommand[s.command] || 0) + s.count;
         }
+
+        const uptimeSeconds = os.uptime();
+        const hours = Math.floor(uptimeSeconds / 3600);
+        const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+
+        const systemStats = `System Stats:
+Hostname  : ${os.hostname()}
+Platform  : ${os.platform()}
+Uptime    : ${hours} jam ${minutes} menit
+CPU Model : ${os.cpus()[0].model}
+CPU Cores : ${os.cpus().length}
+Memory    : ${(os.freemem() / 1024 / 1024).toFixed(2)}/${(
+          os.totalmem() /
+          1024 /
+          1024
+        ).toFixed(2)} MB
+Load Avg  : ${os
+          .loadavg()
+          .map((n) => n.toFixed(2))
+          .join(", ")}
+`;
+
         statsText =
           "Statistik penggunaan perintah:\n" +
           Object.entries(byCommand)
             .map(([cmd, count], i) => `${i + 1}. *${cmd}*: ${count}x`)
-            .join("\n");
+            .join("\n") +
+          "\n\n" +
+          systemStats;
       }
     }
     await sock.sendMessage(jid, { text: statsText });
