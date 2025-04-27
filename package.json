@@ -15,10 +15,12 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@hono/node-server": "^1.14.1",
     "axios": "^1.8.4",
     "baileys": "^6.7.16",
     "chalk": "^5.4.1",
     "dotenv": "^16.5.0",
+    "hono": "^4.7.7",
     "link-preview-js": "^3.0.14",
     "mongodb": "^6.15.0",
     "mysql-baileys": "^1.5.1",
