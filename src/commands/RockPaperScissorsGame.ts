@@ -180,7 +180,7 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
         return;
       }
 
-      const existingGame = sessionService.getSession<RPSSession>(
+      const existingGame = await sessionService.getSession<RPSSession>(
         jid,
         MULTIPLAYER_SESSION_KEY
       );
@@ -193,7 +193,7 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
         return;
       }
 
-      const existingLink = sessionService.getSession<RPSLinkSession>(
+      const existingLink = await sessionService.getSession<RPSLinkSession>(
         user,
         user
       );
@@ -215,12 +215,12 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
       };
 
       if (
-        !sessionService.setSession(
+        !(await sessionService.setSession(
           jid,
           MULTIPLAYER_SESSION_KEY,
           "rps",
           sessionData
-        )
+        ))
       ) {
         await sock.sendMessage(jid, {
           text: "Gagal memulai game multiplayer (batas sesi grup?).",
@@ -229,16 +229,16 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
       }
 
       if (
-        !sessionService.setSession(user, user, LINK_SESSION_KEY, {
+        !(await sessionService.setSession(user, user, LINK_SESSION_KEY, {
           groupJid: jid,
-        })
+        }))
       ) {
         await sock.sendMessage(jid, {
           text: `Gagal menyimpan link sesi untuk ${this.formatUserMention(
             user
           )}. Pastikan bot bisa DM.`,
         });
-        sessionService.clearSession(jid, MULTIPLAYER_SESSION_KEY);
+        await sessionService.clearSession(jid, MULTIPLAYER_SESSION_KEY);
         return;
       }
 
@@ -251,7 +251,7 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
         mentions: [user],
       });
     } else {
-      const existingAiSession = sessionService.getSession<RPSSession>(
+      const existingAiSession = await sessionService.getSession<RPSSession>(
         jid,
         user
       );
@@ -287,7 +287,7 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
     isGroup: boolean
   ) {
     if (isGroup) {
-      const aiSession = sessionService.getSession<RPSSession>(jid, user);
+      const aiSession = await sessionService.getSession<RPSSession>(jid, user);
       if (
         aiSession &&
         aiSession.game === "rps" &&
@@ -302,7 +302,7 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
           aiSession
         );
       } else {
-        const mpSession = sessionService.getSession<RPSSession>(
+        const mpSession = await sessionService.getSession<RPSSession>(
           jid,
           MULTIPLAYER_SESSION_KEY
         );
@@ -321,7 +321,7 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
         }
       }
     } else {
-      const aiSession = sessionService.getSession<RPSSession>(user, user);
+      const aiSession = await sessionService.getSession<RPSSession>(user, user);
       if (
         aiSession &&
         aiSession.game === "rps" &&
@@ -339,7 +339,10 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
       }
 
       // Check for a multiplayer link session (key: user, user)
-      const linkSession = sessionService.getSession<RPSLinkSession>(user, user);
+      const linkSession = await sessionService.getSession<RPSLinkSession>(
+        user,
+        user
+      );
       if (linkSession && linkSession.game === LINK_SESSION_KEY) {
         const groupJid = linkSession.data.groupJid;
         await this.processMultiplayerMove(
@@ -377,7 +380,7 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
     resultText += `AI: ${this.choiceToEmoji(aiChoice)}\n\n`;
     resultText += this.getResultText(result);
 
-    sessionService.clearSession(jid, user);
+    await sessionService.clearSession(jid, user);
     await sock.sendMessage(jid, { text: resultText });
   }
 
@@ -388,7 +391,7 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
     sock: WebSocketInfo,
     sessionService: SessionService
   ) {
-    const gameSession = sessionService.getSession<RPSSession>(
+    const gameSession = await sessionService.getSession<RPSSession>(
       groupJid,
       MULTIPLAYER_SESSION_KEY
     );
@@ -401,7 +404,7 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
       await sock.sendMessage(user, {
         text: "Game multiplayer yang terhubung tidak ditemukan atau sudah berakhir.",
       });
-      sessionService.clearSession(user, user);
+      await sessionService.clearSession(user, user);
       return;
     }
 
@@ -422,7 +425,7 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
       });
     } else if (!rpsSession.player2 || user === rpsSession.player2) {
       if (!rpsSession.player2) {
-        const existingLink = sessionService.getSession<RPSLinkSession>(
+        const existingLink = await sessionService.getSession<RPSLinkSession>(
           user,
           user
         );
@@ -435,9 +438,9 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
           }
         } else {
           if (
-            !sessionService.setSession(user, user, LINK_SESSION_KEY, {
+            !(await sessionService.setSession(user, user, LINK_SESSION_KEY, {
               groupJid: groupJid,
-            })
+            }))
           ) {
             log.error(
               `Failed to set link session for potential Player 2: ${user} in group ${groupJid}`
@@ -473,12 +476,12 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
     }
 
     if (
-      !sessionService.setSession(
+      !(await sessionService.setSession(
         groupJid,
         MULTIPLAYER_SESSION_KEY,
         "rps",
         rpsSession
-      )
+      ))
     ) {
       log.error(`Failed to update main game session for group ${groupJid}`);
       await sock.sendMessage(user, {
@@ -513,11 +516,14 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
         session
       );
       if (session.groupJid)
-        sessionService.clearSession(session.groupJid, MULTIPLAYER_SESSION_KEY);
+        await sessionService.clearSession(
+          session.groupJid,
+          MULTIPLAYER_SESSION_KEY
+        );
       if (session.player1)
-        sessionService.clearSession(session.player1, session.player1);
+        await sessionService.clearSession(session.player1, session.player1);
       if (session.player2)
-        sessionService.clearSession(session.player2, session.player2);
+        await sessionService.clearSession(session.player2, session.player2);
       return;
     }
 
@@ -540,9 +546,12 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
       mentions: [session.player1, session.player2],
     });
 
-    sessionService.clearSession(session.groupJid, MULTIPLAYER_SESSION_KEY);
-    sessionService.clearSession(session.player1, session.player1);
-    sessionService.clearSession(session.player2, session.player2);
+    await sessionService.clearSession(
+      session.groupJid,
+      MULTIPLAYER_SESSION_KEY
+    );
+    await sessionService.clearSession(session.player1, session.player1);
+    await sessionService.clearSession(session.player2, session.player2);
   }
 
   private async handleStopGame(
@@ -553,9 +562,12 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
     isGroup: boolean
   ) {
     const aiSessionKey = isGroup ? jid : user;
-    const aiSession = sessionService.getSession<RPSSession>(aiSessionKey, user);
+    const aiSession = await sessionService.getSession<RPSSession>(
+      aiSessionKey,
+      user
+    );
     if (aiSession && aiSession.game === "rps" && aiSession.data.mode === "ai") {
-      sessionService.clearSession(aiSessionKey, user);
+      await sessionService.clearSession(aiSessionKey, user);
       await sock.sendMessage(jid, { text: "Game RPS vs AI dihentikan." });
       return;
     }
@@ -563,17 +575,20 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
     let groupJid: string | undefined;
     let gameSession: Session<RPSSession> | null = null;
 
-    const linkSession = sessionService.getSession<RPSLinkSession>(user, user);
+    const linkSession = await sessionService.getSession<RPSLinkSession>(
+      user,
+      user
+    );
     if (linkSession && linkSession.game === LINK_SESSION_KEY) {
       groupJid = linkSession.data.groupJid;
       if (groupJid) {
-        gameSession = sessionService.getSession<RPSSession>(
+        gameSession = await sessionService.getSession<RPSSession>(
           groupJid,
           MULTIPLAYER_SESSION_KEY
         );
       }
     } else if (isGroup) {
-      gameSession = sessionService.getSession<RPSSession>(
+      gameSession = await sessionService.getSession<RPSSession>(
         jid,
         MULTIPLAYER_SESSION_KEY
       );
@@ -597,10 +612,10 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
         const player1 = rpsSession.player1;
         const player2 = rpsSession.player2;
 
-        sessionService.clearSession(groupJid, MULTIPLAYER_SESSION_KEY);
-        sessionService.clearSession(player1, player1);
+        await sessionService.clearSession(groupJid, MULTIPLAYER_SESSION_KEY);
+        await sessionService.clearSession(player1, player1);
         if (player2) {
-          sessionService.clearSession(player2, player2);
+          await sessionService.clearSession(player2, player2);
         }
 
         await sock.sendMessage(groupJid, {
@@ -685,7 +700,7 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
     sock: WebSocketInfo,
     sessionService: SessionService
   ) {
-    const mpSession = sessionService.getSession<RPSSession>(
+    const mpSession = await sessionService.getSession<RPSSession>(
       jid,
       MULTIPLAYER_SESSION_KEY
     );
@@ -720,7 +735,10 @@ ${BotConfig.prefix}rps stop - Hentikan game yang sedang kamu mainkan (AI atau Mu
       return;
     }
 
-    const existingLink = sessionService.getSession<RPSLinkSession>(user, user);
+    const existingLink = await sessionService.getSession<RPSLinkSession>(
+      user,
+      user
+    );
     if (existingLink && existingLink.game === LINK_SESSION_KEY) {
       if (existingLink.data.groupJid !== jid) {
         await sock.sendMessage(jid, {

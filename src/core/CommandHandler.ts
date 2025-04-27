@@ -274,7 +274,7 @@ export class CommandHandler {
     msg: proto.IWebMessageInfo
   ) {
     const commandInstance = this.getCommandInstance(command);
-    const existingSession = this.sessionService.getSession(jid, user);
+    const existingSession = await this.sessionService.getSession(jid, user);
 
     if (existingSession && existingSession.game !== command) {
       // Special case: Allow RPS commands if the session is an RPS multiplayer link
@@ -387,9 +387,9 @@ export class CommandHandler {
     user: string,
     sock: WebSocketInfo
   ) {
-    const session = this.sessionService.getSession(jid, user);
+    const session = await this.sessionService.getSession(jid, user);
     if (session) {
-      this.sessionService.clearSession(jid, user);
+      await this.sessionService.clearSession(jid, user);
       await sock.sendMessage(jid, {
         text: BotConfig.messages.gameStopped.replace("{game}", session.game),
       });

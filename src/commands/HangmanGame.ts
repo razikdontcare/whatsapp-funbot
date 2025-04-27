@@ -1,7 +1,7 @@
 import { BotConfig, log } from "../core/config.js";
 import { SessionService } from "../services/SessionService.js";
 import { CommandInterface } from "../core/CommandInterface.js";
-import { WebSocketInfo } from "../core/types.js";
+import { WebSocketInfo, Session } from "../core/types.js";
 import { getRandomKBBI } from "../utils/randomKBBI.js";
 import { randomBytes } from "crypto";
 import { proto } from "baileys";
@@ -28,6 +28,103 @@ const activeHangmanGames: Map<string, HangmanSession> = new Map();
 
 function generateGameId(): string {
   return randomBytes(3).toString("hex");
+}
+
+// Load active games from SessionService on startup
+async function initializeHangmanGames(
+  sessionService: SessionService
+): Promise<void> {
+  try {
+    log.info("Initializing persisted Hangman games...");
+    const activeChats = await sessionService.getAllChatIds();
+    let restoredGames = 0;
+
+    for (const chatJid of activeChats) {
+      const sessions =
+        await sessionService.getAllSessionsInChat<HangmanSession>(chatJid);
+
+      // Group sessions by gameId to find the most complete game state
+      const gameSessionMap: Map<string, HangmanSession> = new Map();
+
+      for (const session of sessions) {
+        if (session.game === "hangman" && session.data.gameId) {
+          const gameId = session.data.gameId;
+
+          // Check if it's a full game data (not just a reference) by confirming key properties exist
+          if (session.data.word) {
+            const existingData = gameSessionMap.get(gameId);
+
+            // Select the most complete version of game data
+            // Prefer data with guessed letters and proper attempts remaining
+            if (
+              !existingData ||
+              (session.data.guessedLetters &&
+                (!existingData.guessedLetters ||
+                  session.data.guessedLetters.length >
+                    existingData.guessedLetters.length))
+            ) {
+              gameSessionMap.set(gameId, session.data);
+            }
+          }
+        }
+      }
+
+      // Now load the most complete game state for each gameId
+      for (const [gameId, gameData] of gameSessionMap.entries()) {
+        if (!activeHangmanGames.has(gameId)) {
+          // Ensure all required properties are properly initialized
+          const sanitizedData: HangmanSession = {
+            gameId: gameData.gameId,
+            word: gameData.word,
+            hint: gameData.hint || "No hint available",
+            guessedLetters: Array.isArray(gameData.guessedLetters)
+              ? gameData.guessedLetters
+              : [],
+            attemptsLeft:
+              typeof gameData.attemptsLeft === "number"
+                ? gameData.attemptsLeft
+                : MAX_ATTEMPTS,
+            maskedWord:
+              gameData.maskedWord || MASK_CHAR.repeat(gameData.word.length),
+            players: Array.isArray(gameData.players) ? gameData.players : [],
+            playerScores: gameData.playerScores || {},
+            hostUser:
+              gameData.hostUser ||
+              (Array.isArray(gameData.players) && gameData.players.length > 0
+                ? gameData.players[0]
+                : "unknown"),
+          };
+
+          // Regenerate the masked word to ensure it's consistent with guessed letters
+          if (sanitizedData.guessedLetters.length > 0) {
+            let newMasked = "";
+            for (let i = 0; i < sanitizedData.word.length; i++) {
+              const char = sanitizedData.word[i];
+              newMasked += sanitizedData.guessedLetters.includes(char)
+                ? char
+                : MASK_CHAR;
+            }
+            sanitizedData.maskedWord = newMasked;
+          }
+
+          activeHangmanGames.set(gameId, sanitizedData);
+          restoredGames++;
+
+          // Log detailed information about restored games for debugging
+          log.info(
+            `Restored game ${gameId} with ${sanitizedData.guessedLetters.length} guessed letters, ` +
+              `${sanitizedData.attemptsLeft} attempts left, and masked word: ${sanitizedData.maskedWord}`
+          );
+        }
+      }
+    }
+
+    log.info(
+      `Restored ${restoredGames} active Hangman games from persistent storage.`
+    );
+  } catch (error) {
+    log.error("Error initializing Hangman games from SessionService:", error);
+  }
 }
 
 export class HangmanGame implements CommandInterface {
@@ -65,7 +162,7 @@ export class HangmanGame implements CommandInterface {
     msg: proto.IWebMessageInfo
   ): Promise<void> {
     const command = args[0]?.toLowerCase();
-    const userSessionLink = sessionService.getSession<{ gameId: string }>(
+    const userSessionLink = await sessionService.getSession<{ gameId: string }>(
       jid,
       user
     );
@@ -183,8 +280,9 @@ export class HangmanGame implements CommandInterface {
     // Store the master game state
     activeHangmanGames.set(gameId, newSessionData);
 
-    // Link the user to this gameId in SessionService
-    sessionService.setSession(jid, user, "hangman", { gameId });
+    // Also store the game data under the gameId as the user key
+    // This ensures we can find it when users join by ID
+    await sessionService.setSession(jid, gameId, "hangman", newSessionData);
 
     await sock.sendMessage(jid, {
       text: `🎮 Game Hangman Multiplayer Dimulai! (ID: *${gameId}*)\n\nKata (${
@@ -223,7 +321,7 @@ export class HangmanGame implements CommandInterface {
         text: `Kamu sudah bergabung dalam game Hangman *${gameId}*.`,
       });
 
-      sessionService.setSession(jid, user, "hangman", { gameId });
+      await sessionService.setSession(jid, user, "hangman", { gameId });
       return;
     }
 
@@ -232,8 +330,11 @@ export class HangmanGame implements CommandInterface {
 
     activeHangmanGames.set(gameId, gameData);
 
-    // Link the user to this gameId in SessionService
-    sessionService.setSession(jid, user, "hangman", { gameId });
+    // Link the user to this gameId in SessionService with minimal data
+    await sessionService.setSession(jid, user, "hangman", { gameId });
+
+    // Update the full game data under the gameId key
+    await sessionService.setSession(jid, gameId, "hangman", gameData);
 
     // Prepare mentions for the joining user and all current players
     const mentions = [user, ...gameData.players];
@@ -258,7 +359,7 @@ export class HangmanGame implements CommandInterface {
     sessionService: SessionService
   ) {
     const gameData = activeHangmanGames.get(gameId);
-    const userSessionLink = sessionService.getSession<{ gameId: string }>(
+    const userSessionLink = await sessionService.getSession<{ gameId: string }>(
       jid,
       user
     );
@@ -279,7 +380,7 @@ export class HangmanGame implements CommandInterface {
       await sock.sendMessage(jid, {
         text: `Game Hangman *${gameId}* sepertinya sudah berakhir.`,
       });
-      sessionService.clearSession(jid, user);
+      await sessionService.clearSession(jid, user);
       return;
     }
 
@@ -289,7 +390,7 @@ export class HangmanGame implements CommandInterface {
     gameData.players = gameData.players.filter((p) => p !== user);
     delete gameData.playerScores[user];
 
-    sessionService.clearSession(jid, user);
+    await sessionService.clearSession(jid, user);
 
     await sock.sendMessage(jid, {
       text: `👋 ${leavingUserMention} meninggalkan game Hangman *${gameId}*.`,
@@ -349,7 +450,7 @@ export class HangmanGame implements CommandInterface {
     const playersToClear = [...gameData.players];
     const hostJid = user;
 
-    this.endGameCleanup(jid, gameId, playersToClear, sessionService);
+    await this.endGameCleanup(jid, gameId, playersToClear, sessionService);
 
     await sock.sendMessage(jid, {
       text: `🛑 Game Hangman *${gameId}* telah dihentikan oleh host (${this.formatUserMention(
@@ -368,7 +469,7 @@ export class HangmanGame implements CommandInterface {
     sessionService: SessionService
   ) {
     const gameData = activeHangmanGames.get(gameId);
-    const userSessionLink = sessionService.getSession<{ gameId: string }>(
+    const userSessionLink = await sessionService.getSession<{ gameId: string }>(
       jid,
       user
     );
@@ -434,6 +535,9 @@ export class HangmanGame implements CommandInterface {
     // Update the master game state (important!)
     if (activeHangmanGames.has(gameId)) {
       activeHangmanGames.set(gameId, gameData);
+
+      // Also update the full game state in SessionService
+      await sessionService.setSession(jid, gameId, "hangman", gameData);
     }
   }
 
@@ -514,7 +618,7 @@ export class HangmanGame implements CommandInterface {
         );
       }
 
-      this.endGameCleanup(jid, gameId, gameData.players, sessionService);
+      await this.endGameCleanup(jid, gameId, gameData.players, sessionService);
       return;
     }
 
@@ -576,7 +680,7 @@ export class HangmanGame implements CommandInterface {
         );
       }
 
-      this.endGameCleanup(jid, gameId, gameData.players, sessionService);
+      await this.endGameCleanup(jid, gameId, gameData.players, sessionService);
       return;
     }
 
@@ -661,12 +765,12 @@ export class HangmanGame implements CommandInterface {
       .join("\n");
   }
 
-  private endGameCleanup(
+  private async endGameCleanup(
     jid: string,
     gameId: string,
     players: string[],
     sessionService: SessionService
-  ): void {
+  ): Promise<void> {
     log.info(`Cleaning up Hangman game ${gameId} in chat ${jid}...`);
 
     const deleted = activeHangmanGames.delete(gameId);
@@ -678,12 +782,15 @@ export class HangmanGame implements CommandInterface {
       );
     }
 
+    // Also clean up the game data stored under gameId key
+    await sessionService.clearSession(jid, gameId);
+    log.info(`Cleared full game data session for game ${gameId}.`);
+
     for (const player of players) {
       try {
-        const playerSession = sessionService.getSession<{ gameId: string }>(
-          jid,
-          player
-        );
+        const playerSession = await sessionService.getSession<{
+          gameId: string;
+        }>(jid, player);
 
         // Important Check: Only clear if the session link belongs to the game being cleaned up
         if (
@@ -712,5 +819,18 @@ export class HangmanGame implements CommandInterface {
       }
     }
     log.info(`Cleanup finished for game ${gameId}.`);
+  }
+
+  // Initialize persisted games when the class is loaded
+  static {
+    // We need to initialize after the SessionService is ready
+    setTimeout(async () => {
+      try {
+        const sessionService = new SessionService();
+        await initializeHangmanGames(sessionService);
+      } catch (error) {
+        log.error("Error in static initializer for HangmanGame:", error);
+      }
+    }, 1000); // Wait 1 second to ensure SessionService is initialized
   }
 }

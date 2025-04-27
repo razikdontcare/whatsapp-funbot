@@ -13,7 +13,7 @@ export const BotConfig = {
   name: "MeoW",
   maxSessions: 5, // Maksimal session per user
   sessionTimeout: 3600000, // Waktu timeout session dalam milidetik (1 jam)
-  sessionName: "meowbot",
+  sessionName: "meowbot", // Nama session untuk penyimpanan (hindari spasi dan karakter khusus)
   allowFromMe: false, // Izinkan bot untuk handle command dari dirinya sendiri
 
   // Pengaturan Game
