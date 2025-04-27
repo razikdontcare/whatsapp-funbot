@@ -534,7 +534,7 @@ export class CommandHandler {
 
         const uptimeSeconds = os.uptime();
         const days = Math.floor(uptimeSeconds / 86400);
-        const hours = Math.floor(uptimeSeconds / 3600);
+        const hours = Math.floor((uptimeSeconds % 86400) / 3600);
         const minutes = Math.floor((uptimeSeconds % 3600) / 60);
 
         let uptimeFormatted = [
