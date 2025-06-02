@@ -7,8 +7,6 @@ import { SessionService } from "../services/SessionService.js";
 import extractUrlsFromText from "../utils/extractUrlsFromText.js";
 import { mimeType } from "mime-type/with-db";
 
-const { lookup } = mimeType;
-
 interface ApiResponse<T> {
   success: boolean;
   message: string;
@@ -126,12 +124,14 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
     log.info("Downloading media from URL:", url);
     const mediaResponse = await this.getMediaURL(url);
     if (mediaResponse instanceof Error) {
+      log.error("Error downloading media:", mediaResponse.message);
       await sock.sendMessage(jid, {
         text: `Terjadi kesalahan saat mengunduh media: ${mediaResponse.message}`,
       });
       return;
     }
     if (Array.isArray(mediaResponse)) {
+      log.info("Multiple media options available:", mediaResponse.length);
       // If multiple media URLs are returned, send them all
       await sock.sendMessage(jid, {
         text: `Media tersedia: ${mediaResponse.length} items ditemukan.`,
@@ -153,8 +153,10 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
         log.info("Media sent:", singleUrl.url);
       }
     } else {
+      log.info("Single media URL received:", mediaResponse.url);
       // If a single media URL is returned, send it directly
       const mediaType = this.getMediaType(mediaResponse.filename);
+      console.log("Media type detected:", mediaType);
       if (mediaType === "image") {
         await sock.sendMessage(jid, {
           image: { url: mediaResponse.url },
@@ -173,13 +175,13 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
         });
         return;
       }
-      log.info("Media sent:", mediaResponse.url);
+      log.info("Media sent");
     }
     log.info("Media download completed for URL:", url);
   }
 
   getMediaType(filename: string): "image" | "video" | "gif" | "unknown" {
-    const mime = lookup(filename);
+    const mime = mimeType.lookup(filename);
     if (!mime) return "unknown";
 
     const mimeString = Array.isArray(mime) ? mime[0] : mime;
@@ -216,7 +218,6 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
         response.data.status === "tunnel" ||
         response.data.status === "redirect"
       ) {
-        log.info("Media URL fetched successfully:", response.data.url);
         return response.data;
       } else {
         log.error("Unexpected response status:", response.data.status);
