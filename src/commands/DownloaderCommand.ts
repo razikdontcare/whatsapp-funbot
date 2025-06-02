@@ -5,6 +5,7 @@ import { BotConfig, log } from "../core/config.js";
 import { WebSocketInfo } from "../core/types.js";
 import { SessionService } from "../services/SessionService.js";
 import extractUrlsFromText from "../utils/extractUrlsFromText.js";
+import { lookup } from "mime-types";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -12,57 +13,29 @@ interface ApiResponse<T> {
   data: T;
 }
 
-export interface TiktokPostDetails {
-  id: string;
-  desc: string;
-  cookies: string;
-  userAgent: string;
-  type: "video" | "image";
-  video?: TiktokVideoDetails;
-  music: TiktokMusicDetails;
-  author: TiktokAuthorDetails;
-  images?: any;
-}
+type Status = "tunnel" | "redirect" | "error" | "picker" | "local-processing";
 
-export interface TiktokVideoDetails {
-  height: number;
-  width: number;
-  duration: number;
-  ratio: string;
-  cover: string;
-  playAddr: string;
-  format: string;
-}
+type ResponseStatus<T extends Status, Extra = {}> = { status: T } & Extra;
 
-export interface TiktokMusicDetails {
-  id: string;
-  title: string;
-  playUrl: string;
-  authorName: string;
-  duration: number;
-  isCopyrighted: boolean;
-  original: boolean;
-}
-
-export interface TiktokAuthorDetails {
-  id: string;
-  username: string;
-  name: string;
-  bio: string;
-  verified: boolean;
-  picture: string;
-}
-
-export interface TiktokImageDetails {
+type PickerObject = {
+  type: "photo" | "video" | "gif";
   url: string;
-  width: number;
-  height: number;
-}
+  thumb?: string;
+};
 
-export interface FacebookVideoQualityUrls {
-  hd: string | null;
-  sd: string | null;
-}
+type ErrorContext = {
+  service?: string;
+  limit?: number;
+};
+
+type CobaltResponse =
+  | ResponseStatus<"tunnel" | "redirect", { url: string; filename: string }>
+  | ResponseStatus<
+      "picker",
+      { audio?: string; audioFilename?: string; picker: PickerObject[] }
+    >
+  | ResponseStatus<"error", { error: { code: string; context?: ErrorContext } }>
+  | ResponseStatus<"local-processing">;
 
 export class DownloaderCommand implements CommandInterface {
   static commandInfo = {
@@ -73,10 +46,6 @@ export class DownloaderCommand implements CommandInterface {
 • ${BotConfig.prefix}downloader <url> — Download video atau gambar
 • reply pesan lain yang berisi URL dengan ${BotConfig.prefix}downloader
 
-Platform yang didukung saat ini:
-- TikTok
-- Facebook
-
 *Contoh:*
 ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
     category: "general",
@@ -85,17 +54,12 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
     maxUses: 3,
   };
 
-  private BASE_URL = "https://downloader.razik.net";
+  private BASE_URL = "https://cobalt.razik.net";
   private client = axios.create({
     baseURL: this.BASE_URL,
     timeout: 5000,
     family: 4,
   });
-  private supportedPlatforms = [
-    "tiktok.com",
-    "facebook.com",
-    "fb.watch",
-  ] as const;
 
   async handleCommand(
     args: string[],
@@ -113,14 +77,18 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
       return;
     }
     if (args.length > 0 && args[0] === "url") {
+      const supportedPlatformsRequest = await this.client.get("/");
+
+      const supportedPlatforms = supportedPlatformsRequest.data.cobalt.services;
+
       await sock.sendMessage(jid, {
-        text: `URL yang didukung: ${this.supportedPlatforms.join(", ")}`,
+        text: `URL yang didukung: ${supportedPlatforms.join(", ")}`,
       });
       return;
     }
 
     // 2. Try to extract URL from args or quoted message
-    let url = args[0] && this.isSupportedUrl(args[0]) ? args[0] : null;
+    let url = args[0] ? args[0] : null;
     if (!url && msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
       // Try to extract from quoted message text
       const quoted = msg.message.extendedTextMessage.contextInfo.quotedMessage;
@@ -132,13 +100,13 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
         quotedText = quoted.imageMessage.caption;
       if (quotedText) {
         const urls = extractUrlsFromText(quotedText);
-        url = urls.find((u) => this.isSupportedUrl(u)) || null;
+        url = urls[0] || null;
       }
     }
     // If still no URL, try to extract from the current message text
     if (!url && msg.message?.extendedTextMessage?.text) {
       const urls = extractUrlsFromText(msg.message.extendedTextMessage.text);
-      url = urls.find((u) => this.isSupportedUrl(u)) || null;
+      url = urls[0] || null;
     }
 
     if (!url) {
@@ -148,155 +116,108 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
       return;
     }
 
-    // 3. Check if the URL is from a supported platform
-    const service = this.supportedPlatforms.find((platform) =>
-      url.includes(platform)
-    );
-    if (!service) {
-      await sock.sendMessage(jid, {
-        text: `Platform tidak didukung. Saat ini hanya mendukung: ${this.supportedPlatforms.join(
-          ", "
-        )}`,
-      });
-      return;
-    }
-
     // 4. Download and send media
     log.info("Downloading media from URL:", url);
-    const mediaUrl = await this.getMediaURL(url, service);
-    if (!mediaUrl) {
+    const mediaUrl = await this.getMediaURL(url);
+    if (mediaUrl instanceof Error) {
       await sock.sendMessage(jid, {
-        text: "Tidak ada media yang ditemukan.",
+        text: `Terjadi kesalahan saat mengunduh media: ${mediaUrl.message}`,
       });
       return;
     }
-    await sock.sendMessage(
-      jid,
-      {
-        text: `Mengunduh media dari ${service}...`,
-      },
-      { quoted: msg }
-    );
-
-    log.info(`Found ${mediaUrl.length} media URLs for ${service}`);
-
-    if (service === "tiktok.com") {
-      if (mediaUrl.length > 1) {
-        for (const media of mediaUrl) {
-          await sock.sendMessage(
-            jid,
-            { image: { url: media } },
-            { quoted: msg }
-          );
-        }
-      } else if (mediaUrl[0].endsWith("view=true")) {
-        await sock.sendMessage(
-          jid,
-          { video: { url: mediaUrl[0] } },
-          { quoted: msg }
-        );
-      } else {
-        await sock.sendMessage(
-          jid,
-          { image: { url: mediaUrl[0] } },
-          { quoted: msg }
-        );
-      }
-    } else if (service === "facebook.com" || service === "fb.watch") {
-      await sock.sendMessage(
-        jid,
-        { video: { url: mediaUrl[0] } },
-        { quoted: msg }
-      );
-    } else {
+    if (Array.isArray(mediaUrl)) {
+      // If multiple media URLs are returned, send them all
       await sock.sendMessage(jid, {
-        text: "Tidak ada media yang ditemukan.",
+        text: `Media tersedia: ${mediaUrl.length} items ditemukan.`,
       });
+      for (const singleUrl of mediaUrl) {
+        if (singleUrl.type === "photo") {
+          await sock.sendMessage(jid, {
+            image: { url: singleUrl.url },
+          });
+        } else if (singleUrl.type === "video") {
+          await sock.sendMessage(jid, {
+            video: { url: singleUrl.url },
+          });
+        } else if (singleUrl.type === "gif") {
+          await sock.sendMessage(jid, {
+            video: { url: singleUrl.url },
+          });
+        }
+        log.info("Media sent:", singleUrl.url);
+      }
+    } else {
+      // If a single media URL is returned, send it directly
+      const mediaType = this.getMediaType(mediaUrl.filename);
+      if (mediaType === "image") {
+        await sock.sendMessage(jid, {
+          image: { url: mediaUrl.url },
+        });
+      } else if (mediaType === "video") {
+        await sock.sendMessage(jid, {
+          video: { url: mediaUrl.url },
+        });
+      } else if (mediaType === "gif") {
+        await sock.sendMessage(jid, {
+          video: { url: mediaUrl.url },
+        });
+      } else {
+        await sock.sendMessage(jid, {
+          text: `Media tidak didukung untuk ${url}`,
+        });
+        return;
+      }
+      log.info("Media sent:", mediaUrl.url);
     }
+    log.info("Media download completed for URL:", url);
   }
 
-  isSupportedUrl(url: string): boolean {
-    return this.supportedPlatforms.some((platform) => url.includes(platform));
+  getMediaType(filename: string): "image" | "video" | "gif" | "unknown" {
+    const mimeType = lookup(filename);
+    if (!mimeType) return "unknown";
+
+    if (mimeType.startsWith("image/")) return "image";
+    if (mimeType.startsWith("video/")) return "video";
+    if (mimeType === "image/gif") return "gif";
+
+    return "unknown";
   }
 
   async getMediaURL(
-    url: string,
-    service: (typeof this.supportedPlatforms)[number]
-  ): Promise<string[] | null> {
+    url: string
+  ): Promise<{ url: string; filename: string } | PickerObject[] | Error> {
     try {
-      switch (service) {
-        case "tiktok.com":
-          const tiktokResponse = (
-            await this.client.get(`/api/tiktok?url=${encodeURIComponent(url)}`)
-          ).data as ApiResponse<TiktokPostDetails>;
+      const response = (await this.client.post(`/`, {
+        url,
+      })) as ApiResponse<CobaltResponse>;
 
-          if (!tiktokResponse.success) {
-            log.error("Error fetching TikTok data:", tiktokResponse.data);
-            return null;
-          }
-
-          if (tiktokResponse.data.type === "video") {
-            const videoUrl = tiktokResponse.data.video?.playAddr;
-            if (videoUrl) {
-              return [
-                `${this.BASE_URL}/api/tiktok?url=${encodeURIComponent(
-                  url
-                )}&view=true`,
-              ];
-            } else {
-              log.error(
-                "No video URL found in TikTok response:",
-                tiktokResponse
-              );
-              return null;
-            }
-          } else if (tiktokResponse.data.type === "image") {
-            const imageUrl = tiktokResponse.data.images;
-            if (imageUrl) {
-              return imageUrl.map((image: TiktokImageDetails) => image.url);
-            } else {
-              log.error(
-                "No image URL found in TikTok response:",
-                tiktokResponse
-              );
-              return null;
-            }
-          } else {
-            log.error("Unsupported media type:", tiktokResponse.data.type);
-            return null;
-          }
-
-        case "facebook.com":
-        case "fb.watch":
-          const fbResponse = (
-            await this.client.get(
-              `/api/facebook?url=${encodeURIComponent(url)}`
-            )
-          ).data as ApiResponse<FacebookVideoQualityUrls[]>;
-          if (!fbResponse.success) {
-            log.error("Error fetching Facebook data:", fbResponse.message);
-            return null;
-          }
-
-          const hdUrl = fbResponse.data[0]?.hd;
-          const sdUrl = fbResponse.data[0]?.sd;
-
-          if (hdUrl) {
-            return [hdUrl];
-          } else if (sdUrl) {
-            return [sdUrl];
-          } else {
-            log.error("No video URL found in Facebook response:", fbResponse);
-            return null;
-          }
-
-        default:
-          log.error("Unsupported platform:", service);
-          return null;
+      if (
+        response.data.status === "error" ||
+        response.data.status === "local-processing"
+      ) {
+        log.error("Error fetching media data:", response.data);
+        return new Error("Error fetching media data for URL: " + url);
+      } else if (response.data.status === "picker") {
+        log.info("Picker response received, media options available.");
+        const picker = response.data.picker;
+        if (picker.length === 0) {
+          return new Error("No media options available for this URL.");
+        }
+        // Return URLs of all available media
+        return picker;
+      } else if (
+        response.data.status === "tunnel" ||
+        response.data.status === "redirect"
+      ) {
+        log.info("Media URL fetched successfully:", response.data.url);
+        return response.data;
+      } else {
+        log.error("Unexpected response status:", response.data.status);
+        return new Error("Unexpected response status: " + response.data.status);
       }
     } catch (error) {
       log.error("Error downloading media:", error);
-      return null;
+      return new Error("Unknown error occurred while downloading media.");
     }
   }
 }
