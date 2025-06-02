@@ -5,7 +5,9 @@ import { BotConfig, log } from "../core/config.js";
 import { WebSocketInfo } from "../core/types.js";
 import { SessionService } from "../services/SessionService.js";
 import extractUrlsFromText from "../utils/extractUrlsFromText.js";
-import { lookup } from "mime-types";
+import { mimeType } from "mime-type/with-db";
+
+const { lookup } = mimeType;
 
 interface ApiResponse<T> {
   success: boolean;
@@ -122,19 +124,19 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
 
     // 4. Download and send media
     log.info("Downloading media from URL:", url);
-    const mediaUrl = await this.getMediaURL(url);
-    if (mediaUrl instanceof Error) {
+    const mediaResponse = await this.getMediaURL(url);
+    if (mediaResponse instanceof Error) {
       await sock.sendMessage(jid, {
-        text: `Terjadi kesalahan saat mengunduh media: ${mediaUrl.message}`,
+        text: `Terjadi kesalahan saat mengunduh media: ${mediaResponse.message}`,
       });
       return;
     }
-    if (Array.isArray(mediaUrl)) {
+    if (Array.isArray(mediaResponse)) {
       // If multiple media URLs are returned, send them all
       await sock.sendMessage(jid, {
-        text: `Media tersedia: ${mediaUrl.length} items ditemukan.`,
+        text: `Media tersedia: ${mediaResponse.length} items ditemukan.`,
       });
-      for (const singleUrl of mediaUrl) {
+      for (const singleUrl of mediaResponse) {
         if (singleUrl.type === "photo") {
           await sock.sendMessage(jid, {
             image: { url: singleUrl.url },
@@ -152,18 +154,18 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
       }
     } else {
       // If a single media URL is returned, send it directly
-      const mediaType = this.getMediaType(mediaUrl.filename);
+      const mediaType = this.getMediaType(mediaResponse.filename);
       if (mediaType === "image") {
         await sock.sendMessage(jid, {
-          image: { url: mediaUrl.url },
+          image: { url: mediaResponse.url },
         });
       } else if (mediaType === "video") {
         await sock.sendMessage(jid, {
-          video: { url: mediaUrl.url },
+          video: { url: mediaResponse.url },
         });
       } else if (mediaType === "gif") {
         await sock.sendMessage(jid, {
-          video: { url: mediaUrl.url },
+          video: { url: mediaResponse.url },
         });
       } else {
         await sock.sendMessage(jid, {
@@ -171,18 +173,19 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
         });
         return;
       }
-      log.info("Media sent:", mediaUrl.url);
+      log.info("Media sent:", mediaResponse.url);
     }
     log.info("Media download completed for URL:", url);
   }
 
   getMediaType(filename: string): "image" | "video" | "gif" | "unknown" {
-    const mimeType = lookup(filename);
-    if (!mimeType) return "unknown";
+    const mime = lookup(filename);
+    if (!mime) return "unknown";
 
-    if (mimeType.startsWith("image/")) return "image";
-    if (mimeType.startsWith("video/")) return "video";
-    if (mimeType === "image/gif") return "gif";
+    const mimeString = Array.isArray(mime) ? mime[0] : mime;
+    if (mimeString.startsWith("image/")) return "image";
+    if (mimeString.startsWith("video/")) return "video";
+    if (mimeString === "image/gif") return "gif";
 
     return "unknown";
   }
