@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - "v*" # This will trigger the workflow on any tag that starts with 'v'
+  release:
+    types: [published, edited] # This will trigger the workflow on release creation or edit
 
 jobs:
   build-and-deploy:
