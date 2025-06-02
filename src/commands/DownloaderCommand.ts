@@ -59,6 +59,10 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
     baseURL: this.BASE_URL,
     timeout: 5000,
     family: 4,
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
   });
 
   async handleCommand(
