@@ -128,7 +128,7 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
     if (Array.isArray(mediaUrl)) {
       // If multiple media URLs are returned, send them all
       await sock.sendMessage(jid, {
-        text: `Media available: ${mediaUrl.length} items found.`,
+        text: `Media tersedia: ${mediaUrl.length} items ditemukan.`,
       });
       for (const singleUrl of mediaUrl) {
         if (singleUrl.type === "photo") {
@@ -152,21 +152,18 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
       if (mediaType === "image") {
         await sock.sendMessage(jid, {
           image: { url: mediaUrl.url },
-          caption: `Image downloaded from ${url}`,
         });
       } else if (mediaType === "video") {
         await sock.sendMessage(jid, {
           video: { url: mediaUrl.url },
-          caption: `Video downloaded from ${url}`,
         });
       } else if (mediaType === "gif") {
         await sock.sendMessage(jid, {
           video: { url: mediaUrl.url },
-          caption: `GIF downloaded from ${url}`,
         });
       } else {
         await sock.sendMessage(jid, {
-          text: `Unsupported media type for URL: ${url}`,
+          text: `Media tidak didukung untuk ${url}`,
         });
         return;
       }
