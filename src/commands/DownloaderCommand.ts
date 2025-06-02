@@ -37,6 +37,28 @@ type CobaltResponse =
   | ResponseStatus<"error", { error: { code: string; context?: ErrorContext } }>
   | ResponseStatus<"local-processing">;
 
+type CobaltRequestBody = {
+  url: string;
+  audioBitrate?: "320" | "256" | "128" | "96" | "64" | "8";
+  audioFormat?: "best" | "mp3" | "ogg" | "wav" | "opus";
+  downloadMode?: "auto" | "audio" | "mute";
+  filenameStyle?: "classic" | "pretty" | "basic" | "nerdy";
+  videoQuality?:
+    | "max"
+    | "4320"
+    | "2160"
+    | "1440"
+    | "1080"
+    | "720"
+    | "480"
+    | "360"
+    | "240"
+    | "144";
+  disableMetadata?: boolean;
+  alwaysProxy?: boolean;
+  localProcessing?: boolean;
+};
+
 export class DownloaderCommand implements CommandInterface {
   static commandInfo = {
     name: "downloader",
@@ -91,6 +113,13 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
       return;
     }
 
+    const downloadMode = args.includes("audio")
+      ? "audio"
+      : args.includes("mute")
+      ? "mute"
+      : "auto";
+    log.info("Download mode set to:", downloadMode);
+
     // 2. Try to extract URL from args or quoted message
     let url = args[0] ? args[0] : null;
     if (!url && msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
@@ -122,7 +151,7 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
 
     // 4. Download and send media
     log.info("Downloading media from URL:", url);
-    const mediaResponse = await this.getMediaURL(url);
+    const mediaResponse = await this.getMediaURL(url, downloadMode);
     if (mediaResponse instanceof Error) {
       log.error("Error downloading media:", mediaResponse.message);
       await sock.sendMessage(jid, {
@@ -169,6 +198,12 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
         await sock.sendMessage(jid, {
           video: { url: mediaResponse.url },
         });
+      } else if (mediaType === "audio") {
+        await sock.sendMessage(jid, {
+          audio: { url: mediaResponse.url },
+          // mimetype: "audio/m",
+          ptt: false,
+        });
       } else {
         await sock.sendMessage(jid, {
           text: `Media tidak didukung untuk ${url}`,
@@ -180,7 +215,9 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
     log.info("Media download completed for URL:", url);
   }
 
-  getMediaType(filename: string): "image" | "video" | "gif" | "unknown" {
+  getMediaType(
+    filename: string
+  ): "image" | "video" | "gif" | "audio" | "unknown" {
     const mime = mimeType.lookup(filename);
     if (!mime) return "unknown";
 
@@ -188,17 +225,20 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
     if (mimeString.startsWith("image/")) return "image";
     if (mimeString.startsWith("video/")) return "video";
     if (mimeString === "image/gif") return "gif";
+    if (mimeString.startsWith("audio/")) return "audio";
 
     return "unknown";
   }
 
   async getMediaURL(
-    url: string
+    url: string,
+    downloadMode: "auto" | "audio" | "mute" = "auto"
   ): Promise<{ url: string; filename: string } | PickerObject[] | Error> {
     try {
       const response = (await this.client.post(`/`, {
         url,
-      })) as ApiResponse<CobaltResponse>;
+        downloadMode,
+      } satisfies CobaltRequestBody)) as ApiResponse<CobaltResponse>;
 
       if (
         response.data.status === "error" ||
