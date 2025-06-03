@@ -6,6 +6,7 @@ import { WebSocketInfo } from "../core/types.js";
 import { SessionService } from "../services/SessionService.js";
 import extractUrlsFromText from "../utils/extractUrlsFromText.js";
 import { mimeType } from "mime-type/with-db";
+import { convertMp3ToOgg } from "../utils/ffmpeg.js";
 
 type Status = "tunnel" | "redirect" | "error" | "picker" | "local-processing";
 
@@ -190,8 +191,17 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
           video: { url: mediaResponse.url },
         });
       } else if (mediaType === "audio") {
+        const resp = await axios.get(mediaResponse.url, {
+          responseType: "arraybuffer",
+          family: 4,
+          timeout: 10000,
+        });
+        const audioBuffer = Buffer.from(resp.data);
+        // Convert MP3 to OGG if needed
+        const oggBuffer = await convertMp3ToOgg(audioBuffer);
+
         await sock.sendMessage(jid, {
-          audio: { url: mediaResponse.url },
+          audio: oggBuffer,
           mimetype: "audio/mp4",
           ptt: false,
         });
