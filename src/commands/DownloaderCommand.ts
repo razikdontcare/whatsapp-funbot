@@ -201,7 +201,7 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
       } else if (mediaType === "audio") {
         await sock.sendMessage(jid, {
           audio: { url: mediaResponse.url },
-          // mimetype: "audio/m",
+          mimetype: "audio/mp4",
           ptt: false,
         });
       } else {
