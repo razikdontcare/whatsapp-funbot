@@ -154,7 +154,6 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
       return;
     }
     if (Array.isArray(mediaResponse)) {
-      log.info("Multiple media options available:", mediaResponse.length);
       // If multiple media URLs are returned, send them all
       await sock.sendMessage(jid, {
         text: `Media tersedia: ${mediaResponse.length} items ditemukan.`,
@@ -176,10 +175,8 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
         log.info("Media sent:", singleUrl.url);
       }
     } else {
-      log.info("Single media URL received:", mediaResponse.url);
       // If a single media URL is returned, send it directly
       const mediaType = this.getMediaType(mediaResponse.filename);
-      console.log("Media type detected:", mediaType);
       if (mediaType === "image") {
         await sock.sendMessage(jid, {
           image: { url: mediaResponse.url },
@@ -204,7 +201,6 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
         });
         return;
       }
-      log.info("Media sent");
     }
     log.info("Media download completed for URL:", url);
   }
