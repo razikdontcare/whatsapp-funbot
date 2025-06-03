@@ -116,7 +116,7 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
     log.info("Download mode set to:", downloadMode);
 
     // 2. Try to extract URL from args or quoted message
-    let url = args[0] ? args[0] : null;
+    let url = extractUrlsFromText(args.join(" "))[0] || null;
     if (!url && msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
       // Try to extract from quoted message text
       const quoted = msg.message.extendedTextMessage.contextInfo.quotedMessage;
