@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 import { proto } from "baileys";
 import { CommandInterface } from "../core/CommandInterface.js";
 import { BotConfig, log } from "../core/config.js";
@@ -6,12 +6,7 @@ import { WebSocketInfo } from "../core/types.js";
 import { SessionService } from "../services/SessionService.js";
 import extractUrlsFromText from "../utils/extractUrlsFromText.js";
 import { mimeType } from "mime-type/with-db";
-
-interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
+import { convertMp3ToOgg } from "../utils/ffmpeg.js";
 
 type Status = "tunnel" | "redirect" | "error" | "picker" | "local-processing";
 
@@ -160,7 +155,6 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
       return;
     }
     if (Array.isArray(mediaResponse)) {
-      log.info("Multiple media options available:", mediaResponse.length);
       // If multiple media URLs are returned, send them all
       await sock.sendMessage(jid, {
         text: `Media tersedia: ${mediaResponse.length} items ditemukan.`,
@@ -182,10 +176,8 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
         log.info("Media sent:", singleUrl.url);
       }
     } else {
-      log.info("Single media URL received:", mediaResponse.url);
       // If a single media URL is returned, send it directly
       const mediaType = this.getMediaType(mediaResponse.filename);
-      console.log("Media type detected:", mediaType);
       if (mediaType === "image") {
         await sock.sendMessage(jid, {
           image: { url: mediaResponse.url },
@@ -199,8 +191,17 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
           video: { url: mediaResponse.url },
         });
       } else if (mediaType === "audio") {
+        const resp = await axios.get(mediaResponse.url, {
+          responseType: "arraybuffer",
+          family: 4,
+          timeout: 10000,
+        });
+        const audioBuffer = Buffer.from(resp.data);
+        // Convert MP3 to OGG if needed
+        const oggBuffer = await convertMp3ToOgg(audioBuffer);
+
         await sock.sendMessage(jid, {
-          audio: { url: mediaResponse.url },
+          audio: oggBuffer,
           mimetype: "audio/mp4",
           ptt: false,
         });
@@ -210,7 +211,6 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
         });
         return;
       }
-      log.info("Media sent");
     }
     log.info("Media download completed for URL:", url);
   }
@@ -238,7 +238,7 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
       const response = (await this.client.post(`/`, {
         url,
         downloadMode,
-      } satisfies CobaltRequestBody)) as ApiResponse<CobaltResponse>;
+      } satisfies CobaltRequestBody)) as AxiosResponse<CobaltResponse>;
 
       if (
         response.data.status === "error" ||
