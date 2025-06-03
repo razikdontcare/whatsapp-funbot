@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 import { proto } from "baileys";
 import { CommandInterface } from "../core/CommandInterface.js";
 import { BotConfig, log } from "../core/config.js";
@@ -6,12 +6,6 @@ import { WebSocketInfo } from "../core/types.js";
 import { SessionService } from "../services/SessionService.js";
 import extractUrlsFromText from "../utils/extractUrlsFromText.js";
 import { mimeType } from "mime-type/with-db";
-
-interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
 
 type Status = "tunnel" | "redirect" | "error" | "picker" | "local-processing";
 
@@ -238,7 +232,7 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
       const response = (await this.client.post(`/`, {
         url,
         downloadMode,
-      } satisfies CobaltRequestBody)) as ApiResponse<CobaltResponse>;
+      } satisfies CobaltRequestBody)) as AxiosResponse<CobaltResponse>;
 
       if (
         response.data.status === "error" ||
