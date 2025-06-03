@@ -205,6 +205,10 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
           mimetype: "audio/mp4",
           ptt: false,
         });
+
+        await sock.sendMessage(jid, {
+          text: `Audio yang dikirim dikonversi ke OGG karena merupakan format yang didukung WhatsApp. Jika kamu membutuhkan format aslinya, silahkan unduh dari ${mediaResponse.url}`,
+        });
       } else {
         await sock.sendMessage(jid, {
           text: `Media tidak didukung untuk ${url}`,
