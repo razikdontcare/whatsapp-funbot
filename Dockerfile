@@ -26,7 +26,7 @@ RUN bun run tsc
 FROM node:20-alpine
 
 # Install runtime dependencies only
-RUN apk add --no-cache vips-dev
+RUN apk add --no-cache vips-dev ffmpeg
 
 WORKDIR /app
 
