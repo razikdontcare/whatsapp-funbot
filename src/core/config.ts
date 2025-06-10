@@ -1,3 +1,5 @@
+import { config } from "dotenv";
+config(); // Load environment variables from .env file
 import { Logger } from "../utils/logger.js";
 
 // Define all possible roles here
@@ -31,6 +33,9 @@ export const BotConfig = {
     hangman: "👻",
     rps: "✂️",
   },
+
+  // Pengaturan API
+  groqApiKey: process.env.GROQ_API_KEY || "", // Kunci API untuk Groq AI
 
   // Pesan respons
   messages: {

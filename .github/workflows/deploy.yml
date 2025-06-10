@@ -4,8 +4,6 @@ on:
   push:
     tags:
       - "v*" # This will trigger the workflow on any tag that starts with 'v'
-  release:
-    types: [published, edited] # This will trigger the workflow on release creation or edit
 
 jobs:
   build-and-deploy:
@@ -48,8 +46,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            MONGO_URI=${{ secrets.MONGO_URI }}
 
       - name: Get the version
         id: get_version
@@ -60,15 +56,19 @@ jobs:
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
           VERSION: ${{ steps.get_version.outputs.VERSION }}
+          CR_PAT: ${{ secrets.CR_PAT }}
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          NODE_ENV: "production"
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || '22' }}
-          envs: GITHUB_REPOSITORY,VERSION
+          envs: GITHUB_REPOSITORY,VERSION,CR_PAT,MONGO_URI,NODE_ENV,GROQ_API_KEY
           script: |
             # Login to GitHub Container Registry
-            echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "${CR_PAT}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
             # Define image
             IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY}:${VERSION}"
@@ -81,11 +81,19 @@ jobs:
             docker stop whatsapp-funbot 2>/dev/null || true
             docker rm whatsapp-funbot 2>/dev/null || true
 
+            # Create .env file (alternative method)
+            echo "Creating environment configuration..."
+            cat > .env << EOF
+            MONGO_URI=${MONGO_URI}
+            NODE_ENV=${NODE_ENV}
+            GROQ_API_KEY=${GROQ_API_KEY}
+            EOF
+
             # Run the new container with appropriate environment variables
             docker run -d --name whatsapp-funbot \
               --hostname razikdotnet-wabot \
               --restart unless-stopped \
-              -e MONGO_URI="${{ secrets.MONGO_URI }}" \
+              --env-file .env \
               "${IMAGE_NAME}"
 
             # Clean up old images

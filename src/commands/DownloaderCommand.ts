@@ -108,6 +108,10 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
       return;
     }
 
+    await sock.sendMessage(jid, {
+      text: `Info: Platform YouTube saat ini sedang bermasalah, silakan gunakan platform lain untuk mengunduh media.`,
+    });
+
     const downloadMode = args.includes("audio")
       ? "audio"
       : args.includes("mute")
