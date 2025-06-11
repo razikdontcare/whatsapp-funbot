@@ -21,8 +21,7 @@ export class YTDLCommand implements CommandInterface {
     maxUses: 5,
   };
 
-  private cookiesFilePath = "/cookies.txt";
-  private ytdl = new YtDlpWrapper(this.cookiesFilePath);
+  private ytdl = new YtDlpWrapper();
 
   async handleCommand(
     args: string[],
