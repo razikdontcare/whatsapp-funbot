@@ -26,7 +26,10 @@ RUN bun run tsc
 FROM node:20-alpine
 
 # Install runtime dependencies only
-RUN apk add --no-cache vips-dev ffmpeg
+RUN apk add --no-cache vips-dev ffmpeg python3 py3-pip curl ca-certificates
+
+# Install yt-dlp with default dependencies
+RUN python3 -m pip install -U --no-cache-dir "yt-dlp[default]"
 
 WORKDIR /app
 
