@@ -59,7 +59,7 @@ export class YTDLCommand implements CommandInterface {
     sessionService: SessionService,
     msg: proto.IWebMessageInfo
   ): Promise<void> {
-    if (args.length === 0) {
+    if (args.length > 0 && args[0] === "help") {
       await sock.sendMessage(jid, {
         text: `Usage: ${YTDLCommand.commandInfo.helpText}`,
       });
