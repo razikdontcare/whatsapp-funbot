@@ -21,15 +21,53 @@ interface YtDlpResult {
 
 export class YtDlpWrapper {
   private cookiesFile: string;
+  private readonly DOWNLOAD_TIMEOUT = 300000; // 5 minutes timeout
+  private readonly MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB limit
+  private readonly MAX_DURATION = 600; // 10 minutes limit
 
   constructor(cookiesFile: string = "cookies.txt") {
     this.cookiesFile = cookiesFile;
+  }
+
+  async getVideoInfo(url: string): Promise<any> {
+    const args = [
+      "yt-dlp",
+      "--dump-json",
+      "--no-download",
+      "--cookies",
+      this.cookiesFile,
+      url,
+    ];
+
+    try {
+      const { stdout } = await this.executeCommandWithTimeout(args, 30000); // 30s timeout for info
+      return JSON.parse(stdout);
+    } catch (error) {
+      throw new Error(`Failed to get video info: ${error}`);
+    }
   }
 
   async downloadToBuffer(
     url: string,
     options: YtDlpOptions = {}
   ): Promise<YtDlpResult> {
+    // Check video info first
+    const videoInfo = await this.getVideoInfo(url);
+
+    // Check duration limit
+    if (videoInfo.duration && videoInfo.duration > this.MAX_DURATION) {
+      throw new Error(
+        `Video too long: ${Math.round(videoInfo.duration / 60)} minutes (max: ${
+          this.MAX_DURATION / 60
+        } minutes)`
+      );
+    }
+
+    // Check if it's a live stream
+    if (videoInfo.is_live) {
+      throw new Error("Live streams are not supported");
+    }
+
     // Generate temporary filename
     const tempId = randomUUID();
     const tempDir = tmpdir();
@@ -39,8 +77,11 @@ export class YtDlpWrapper {
     const args = this.buildArgs(url, outputTemplate, options);
 
     try {
-      // Execute yt-dlp command
-      const { stdout, stderr } = await this.executeCommand(args);
+      // Execute yt-dlp command with timeout
+      const { stdout, stderr } = await this.executeCommandWithTimeout(
+        args,
+        this.DOWNLOAD_TIMEOUT
+      );
 
       // Find the downloaded file
       const downloadedFile = await this.findDownloadedFile(tempDir, tempId);
@@ -61,6 +102,8 @@ export class YtDlpWrapper {
         metadata: this.parseMetadata(stdout),
       };
     } catch (error) {
+      // Clean up any partial downloads
+      await this.cleanupTempFiles(tempDir, tempId);
       throw new Error(`yt-dlp failed: ${error}`);
     }
   }
@@ -91,15 +134,35 @@ export class YtDlpWrapper {
     // Add output template
     args.push("-o", outputTemplate);
 
-    // Add format if specified
+    // Enhanced format selection
     if (options.format) {
       args.push("-f", options.format);
+    } else if (options.audioOnly) {
+      // Priority: m4a > mp3 > any audio
+      args.push("-f", "bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio/best");
+    } else {
+      // Enhanced video format selection with WhatsApp compatibility
+      const videoFormats = [
+        "best[height<=1080][ext=mp4]",
+        "best[height<=720][ext=mp4]",
+        "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]",
+        "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]",
+        "best[height<=1080]",
+        "best[height<=720]",
+        "worst",
+      ];
+      args.push("-f", videoFormats.join("/"));
+    }
+
+    // Audio processing for video downloads
+    if (!options.audioOnly) {
+      args.push("--merge-output-format", "mp4");
     }
 
     // Audio only option
     if (options.audioOnly) {
       args.push("-x");
-      args.push("--audio-format", "mp3"); // Default to mp3 if not specified
+      args.push("--audio-format", "mp3");
     }
 
     // Add URL
@@ -108,8 +171,9 @@ export class YtDlpWrapper {
     return args;
   }
 
-  private executeCommand(
-    args: string[]
+  private executeCommandWithTimeout(
+    args: string[],
+    timeoutMs: number
   ): Promise<{ stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
       const process = spawn(args[0], args.slice(1), {
@@ -118,6 +182,24 @@ export class YtDlpWrapper {
 
       let stdout = "";
       let stderr = "";
+      let isResolved = false;
+
+      // Set up timeout
+      const timeout = setTimeout(() => {
+        if (!isResolved) {
+          isResolved = true;
+          process.kill("SIGTERM");
+
+          // Force kill if SIGTERM doesn't work
+          setTimeout(() => {
+            if (!process.killed) {
+              process.kill("SIGKILL");
+            }
+          }, 5000);
+
+          reject(new Error(`Download timeout after ${timeoutMs}ms`));
+        }
+      }, timeoutMs);
 
       process.stdout?.on("data", (data) => {
         stdout += data.toString();
@@ -128,17 +210,44 @@ export class YtDlpWrapper {
       });
 
       process.on("close", (code) => {
-        if (code === 0) {
-          resolve({ stdout, stderr });
-        } else {
-          reject(new Error(`Process exited with code ${code}: ${stderr}`));
+        if (!isResolved) {
+          isResolved = true;
+          clearTimeout(timeout);
+
+          if (code === 0) {
+            resolve({ stdout, stderr });
+          } else {
+            reject(new Error(`Process exited with code ${code}: ${stderr}`));
+          }
         }
       });
 
       process.on("error", (error) => {
-        reject(error);
+        if (!isResolved) {
+          isResolved = true;
+          clearTimeout(timeout);
+          reject(error);
+        }
       });
     });
+  }
+
+  private async cleanupTempFiles(
+    tempDir: string,
+    tempId: string
+  ): Promise<void> {
+    try {
+      const files = await fs.readdir(tempDir);
+      const tempFiles = files.filter((file) =>
+        file.includes(`ytdlp_${tempId}`)
+      );
+
+      await Promise.all(
+        tempFiles.map((file) => fs.unlink(join(tempDir, file)).catch(() => {}))
+      );
+    } catch (error) {
+      // Ignore cleanup errors
+    }
   }
 
   private async findDownloadedFile(
@@ -195,6 +304,8 @@ export class YtDlpWrapper {
       noMtime: true,
       sortBy: "ext",
       cookiesFile: this.cookiesFile,
+      format:
+        "best[height<=1080]/bestvideo[height<=1080]+bestaudio/best[height<=1080]/worst",
     });
   }
 
