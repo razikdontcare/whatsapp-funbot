@@ -29,7 +29,9 @@ FROM node:20-alpine
 RUN apk add --no-cache vips-dev ffmpeg python3 py3-pip curl ca-certificates
 
 # Install yt-dlp with default dependencies
-RUN python3 -m pip install -U --no-cache-dir "yt-dlp[default]"
+RUN python3 -m venv /opt/yt-dlp-venv \
+    && /opt/yt-dlp-venv/bin/pip install -U --no-cache-dir "yt-dlp[default]" \
+    && ln -s /opt/yt-dlp-venv/bin/yt-dlp /usr/local/bin/yt-dlp
 
 WORKDIR /app
 
