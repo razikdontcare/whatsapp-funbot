@@ -10,9 +10,11 @@ export class YTDLCommand implements CommandInterface {
   static commandInfo = {
     name: "ytdl",
     aliases: ["yt", "youtube", "dla"],
-    description: "Download video or audio from YouTube.",
+    description:
+      "Download video or audio from YouTube or other supported platform.",
     helpText: `*Usage:*
-• ${BotConfig.prefix}dla <url> — Download video or audio from YouTube
+• ${BotConfig.prefix}dla <url> — Download video or audio from YouTube or other supported platform.
+
 *Example:*
 • ${BotConfig.prefix}dla https://www.youtube.com/watch?v=dQw4w9WgXcQ`,
     category: "general",
@@ -22,6 +24,31 @@ export class YTDLCommand implements CommandInterface {
   };
 
   private ytdl = new YtDlpWrapper();
+  private readonly SEND_TIMEOUT = 300000; // 5 minutes timeout
+
+  private async sendWithTimeout(
+    sock: WebSocketInfo,
+    jid: string,
+    message: any,
+    timeoutMs: number = this.SEND_TIMEOUT
+  ): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error(`Send timeout after ${timeoutMs}ms`));
+      }, timeoutMs);
+
+      sock
+        .sendMessage(jid, message)
+        .then(() => {
+          clearTimeout(timeout);
+          resolve(true);
+        })
+        .catch((error) => {
+          clearTimeout(timeout);
+          reject(error);
+        });
+    });
+  }
 
   async handleCommand(
     args: string[],
@@ -38,12 +65,12 @@ export class YTDLCommand implements CommandInterface {
       return;
     }
 
-    const downloadMode = args.includes("audio")
-      ? "audio"
-      : args.includes("mute")
-      ? "mute"
-      : "auto";
+    const downloadMode = args.includes("audio") ? "audio" : "video";
     log.info("Download mode set to:", downloadMode);
+
+    await sock.sendMessage(jid, {
+      text: `*Info Penting:*\nCommand ini sedang dalam tahap pengembangan. Proses pengunduhan mungkin memerlukan waktu yang lama tergantung pada ukuran file dan kecepatan koneksi server. Gunakan command ini hanya jika media yang diunduh dengan "${BotConfig.prefix}dl" tidak berhasil.\n\nDemi kenyamanan, proses pengunduhan akan dibatasi maksimal 5 menit. Jika file terlalu besar, silakan gunakan command "${BotConfig.prefix}dl" untuk mengunduh media yang lebih besar.`,
+    });
 
     // 2. Try to extract URL from args or quoted message
     let url = extractUrlsFromText(args.join(" "))[0] || null;
@@ -87,18 +114,46 @@ export class YTDLCommand implements CommandInterface {
     }
 
     if (downloadMode === "audio") {
-      await sock.sendMessage(jid, {
-        audio: response.buffer,
-        mimetype: "audio/mp4",
-        fileName: response.filename,
-      });
+      try {
+        await this.sendWithTimeout(sock, jid, {
+          audio: response.buffer,
+          mimetype: "audio/mp4",
+          fileName: response.filename,
+        });
+      } catch (error) {
+        log.error("Failed to send audio:", error);
+        await sock.sendMessage(jid, {
+          text: "Gagal mengirim audio. File mungkin terlalu besar atau koneksi timeout.",
+        });
+      }
       return;
     } else {
-      await sock.sendMessage(jid, {
-        video: response.buffer,
-        mimetype: "video/mp4",
-        fileName: response.filename,
-      });
+      try {
+        // Send a status message for large videos
+        if (response.buffer.length > 50 * 1024 * 1024) {
+          // 50MB
+          await sock.sendMessage(jid, {
+            text: "Mengirim video besar, mohon tunggu maksimal 5 menit.",
+          });
+        }
+
+        await this.sendWithTimeout(sock, jid, {
+          video: response.buffer,
+          mimetype: "video/mp4",
+          fileName: response.filename,
+        });
+      } catch (error) {
+        log.error("Failed to send video:", error);
+        if (error instanceof Error && error.message.includes("timeout")) {
+          await sock.sendMessage(jid, {
+            text: "Timeout saat mengirim video. File mungkin terlalu besar.",
+          });
+        } else {
+          await sock.sendMessage(jid, {
+            text: "Gagal mengirim video. File mungkin terlalu besar atau terjadi kesalahan.",
+          });
+        }
+      }
       return;
     }
   }
