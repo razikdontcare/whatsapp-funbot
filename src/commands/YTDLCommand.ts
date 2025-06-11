@@ -10,9 +10,11 @@ export class YTDLCommand implements CommandInterface {
   static commandInfo = {
     name: "ytdl",
     aliases: ["yt", "youtube", "dla"],
-    description: "Download video or audio from YouTube.",
+    description:
+      "Download video or audio from YouTube or other supported platform.",
     helpText: `*Usage:*
-• ${BotConfig.prefix}dla <url> — Download video or audio from YouTube
+• ${BotConfig.prefix}dla <url> — Download video or audio from YouTube or other supported platform.
+
 *Example:*
 • ${BotConfig.prefix}dla https://www.youtube.com/watch?v=dQw4w9WgXcQ`,
     category: "general",
