@@ -410,8 +410,6 @@ export class ConfigCommand implements CommandInterface {
 
 *Lainnya:*
 • \`config reset\` - Reset ke pengaturan default
-
-⚠️ *Catatan:* API keys dan pengaturan sensitif tetap menggunakan environment variables untuk keamanan.
     `.trim();
 
     await sock.sendMessage(chatId, { text: helpText });
