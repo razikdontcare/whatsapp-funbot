@@ -1,7 +1,7 @@
 import { CommandInterface } from "./CommandInterface.js";
 import { SessionService } from "../services/SessionService.js";
 import { CommandUsageService } from "../services/CommandUsageService.js";
-import { BotConfig, log, getUserRoles, getCurrentConfig } from "./config.js";
+import { log, getUserRoles, getCurrentConfig } from "./config.js";
 import { WebSocketInfo } from "./types.js";
 import { CooldownManager } from "./CooldownManager.js";
 import { proto } from "baileys";
@@ -142,6 +142,7 @@ export class CommandHandler {
   ): Promise<void> {
     try {
       const { command, args } = await this.extractCommand(text);
+      const config = await getCurrentConfig();
 
       log.debug(
         `Handling command: ${command} with args: ${args.join(
@@ -206,7 +207,7 @@ export class CommandHandler {
               actualCommand,
               cooldownTime
             );
-            const config = await getCurrentConfig();
+
             await sock.sendMessage(jid, {
               text: `${config.emoji.error} Kamu terlalu cepat menggunakan perintah ini. Coba lagi dalam ${remainingTime} detik.`,
             });
@@ -258,16 +259,17 @@ export class CommandHandler {
         }
       } else {
         await sock.sendMessage(jid, {
-          text: BotConfig.unknownCommandResponse.replace(
+          text: config.unknownCommandResponse.replace(
             "{prefix}",
-            BotConfig.prefix
+            config.prefix
           ),
         });
       }
     } catch (error) {
       log.error(`Error handling command: ${error}`);
+      const config = await getCurrentConfig();
       await sock.sendMessage(jid, {
-        text: BotConfig.messages.commandError,
+        text: config.messages.commandError,
       });
     }
   }
@@ -282,6 +284,7 @@ export class CommandHandler {
   ) {
     const commandInstance = this.getCommandInstance(command);
     const existingSession = await this.sessionService.getSession(jid, user);
+    const config = await getCurrentConfig();
 
     if (existingSession && existingSession.game !== command) {
       // Special case: Allow RPS commands if the session is an RPS multiplayer link
@@ -289,9 +292,9 @@ export class CommandHandler {
         // This is fine - let the RPS game handle its link sessions
       } else {
         await sock.sendMessage(jid, {
-          text: BotConfig.messages.gameInProgress
+          text: config.messages.gameInProgress
             .replace("{game}", existingSession.game)
-            .replace("{prefix}", BotConfig.prefix),
+            .replace("{prefix}", config.prefix),
         });
         return;
       }
@@ -481,7 +484,7 @@ export class CommandHandler {
 
     if (!commandInfo) {
       await sock.sendMessage(jid, {
-        text: `Perintah *${BotConfig.prefix}${args[0]}* tidak ditemukan.\nGunakan ${BotConfig.prefix}help untuk melihat daftar perintah yang tersedia.`,
+        text: `Perintah *${config.prefix}${args[0]}* tidak ditemukan.\nGunakan ${config.prefix}help untuk melihat daftar perintah yang tersedia.`,
       });
       return;
     }
@@ -489,12 +492,12 @@ export class CommandHandler {
     let aliasText = "";
     if (commandInfo.aliases && commandInfo.aliases.length > 0) {
       aliasText = `\n*Alias:* ${commandInfo.aliases
-        .map((a) => BotConfig.prefix + a)
+        .map((a) => config.prefix + a)
         .join(", ")}`;
     }
 
     let helpText =
-      `*${BotConfig.prefix}${commandInfo.name}*${aliasText}\n` +
+      `*${config.prefix}${commandInfo.name}*${aliasText}\n` +
       `*Deskripsi:* ${commandInfo.description}\n\n`;
 
     if (commandInfo.helpText) {
