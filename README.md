@@ -1,15 +1,169 @@
-# whatsapp-funbot
+# WhatsApp Fun Bot
 
-To install dependencies:
+Bot WhatsApp multifungsi dengan berbagai game dan utilitas, dilengkapi sistem konfigurasi dinamis terintegrasi MongoDB.
+
+## ✨ Fitur Utama
+
+- 🎮 **Game Interaktif**: Hangman, Rock Paper Scissors, dan game lainnya
+- ⚙️ **Konfigurasi Dinamis**: Kelola pengaturan bot via command atau API tanpa restart
+- 👥 **Sistem Role**: Admin, Moderator, dan VIP dengan permission berbeda
+- 📊 **Command Usage Stats**: Tracking penggunaan command
+- 🔄 **Session Management**: Kelola session game dengan MongoDB
+- 🌐 **REST API**: Endpoint untuk monitoring dan management
+- 📝 **Command Usage Tracking**: Analytics penggunaan bot
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js atau Bun
+- MongoDB (local atau cloud)
+- WhatsApp account untuk bot
+
+### Installation
 
 ```bash
+# Clone repository
+git clone <repository-url>
+cd whatsapp-funbot
+
+# Install dependencies
 bun install
+
+# Setup environment variables
+cp .env.example .env
+# Edit .env dengan konfigurasi Anda
 ```
 
-To run:
+### Environment Variables
+
+```env
+# MongoDB Connection
+MONGO_URI=mongodb://localhost:27017/whatsapp-bot
+
+# API Keys
+GROQ_API_KEY=your_groq_api_key_here
+
+# Environment
+NODE_ENV=development
+```
+
+### Running the Bot
 
 ```bash
+# Development
 bun run src/index.ts
+
+# Production
+NODE_ENV=production bun run src/index.ts
 ```
 
-This project was created using `bun init` in bun v1.2.0. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+## 📖 Documentation
+
+- [Configuration Management](./CONFIG_MANAGEMENT.md) - Panduan lengkap sistem konfigurasi dinamis
+- [API Documentation](./API.md) - REST API endpoints
+- [Game Development Guide](./GAMES.md) - Cara membuat game baru
+
+## 🎮 Available Commands
+
+### Core Commands
+
+- `!games` - Lihat daftar game tersedia
+- `!help [command]` - Bantuan command
+- `!stop` - Hentikan game yang sedang berjalan
+- `!stats` - Statistik penggunaan command
+
+### Games
+
+- `!hangman start` - Mulai game hangman
+- `!rps start` - Mulai game rock paper scissors
+
+### Admin Commands (Admin Only)
+
+- `!config get` - Lihat konfigurasi bot
+- `!config set <param> <value>` - Ubah konfigurasi
+- `!config add-admin <jid>` - Tambah admin
+- `!register` - Registrasi grup
+
+## ⚙️ Dynamic Configuration
+
+Bot mendukung konfigurasi dinamis yang tersimpan di MongoDB:
+
+```bash
+# Ubah prefix bot
+!config set prefix #
+
+# Ubah nama bot
+!config set name "My Bot"
+
+# Tambah admin baru
+!config add-admin 6281234567890@s.whatsapp.net
+
+# Reset ke default
+!config reset
+```
+
+Lihat [CONFIG_MANAGEMENT.md](./CONFIG_MANAGEMENT.md) untuk panduan lengkap.
+
+## 🌐 REST API
+
+Bot menyediakan REST API untuk monitoring dan management:
+
+```bash
+# Get bot status
+GET http://localhost:3000/api/config
+
+# Update configuration
+POST http://localhost:3000/api/config
+
+# Get command usage stats
+GET http://localhost:3000/api/command-usage
+
+# Get game leaderboards
+GET http://localhost:3000/api/leaderboard?game=hangman
+```
+
+## 🏗️ Architecture
+
+```
+src/
+├── commands/          # Command implementations
+├── core/             # Core bot functionality
+│   ├── config.ts     # Dynamic configuration system
+│   ├── BotClient.ts  # Main bot client
+│   └── CommandHandler.ts
+├── services/         # Business logic services
+│   ├── BotConfigService.ts    # Configuration management
+│   ├── SessionService.ts      # Session management
+│   └── GameLeaderboardService.ts
+└── utils/            # Utility functions
+```
+
+## 🔒 Security Features
+
+- **Environment Variables**: Data sensitif (API keys) tetap di env vars
+- **Role-based Access**: Command terbatas berdasarkan role user
+- **MongoDB Integration**: Konfigurasi tersimpan aman di database
+- **Audit Logging**: Semua perubahan konfigurasi di-log
+
+## 🤝 Contributing
+
+1. Fork repository ini
+2. Buat feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit perubahan (`git commit -m 'Add some AmazingFeature'`)
+4. Push ke branch (`git push origin feature/AmazingFeature`)
+5. Buat Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License.
+
+## 🙏 Acknowledgments
+
+- [Baileys](https://github.com/WhiskeySockets/Baileys) - WhatsApp Web API
+- [MongoDB](https://www.mongodb.com/) - Database
+- [Bun](https://bun.sh/) - JavaScript runtime
+
+---
+
+Built with ❤️ using TypeScript and MongoDB
