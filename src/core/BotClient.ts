@@ -11,7 +11,7 @@ import wa, {
 const { proto, Browsers } = wa;
 import { CommandHandler } from "./CommandHandler.js";
 import { SessionService } from "../services/SessionService.js";
-import { BotConfig } from "./config.js";
+import { BotConfig, getCurrentConfig } from "./config.js";
 import { WebSocketInfo } from "./types.js";
 import { Boom } from "@hapi/boom";
 import { log } from "./config.js";
@@ -193,7 +193,10 @@ export class BotClient {
         try {
           const m = messages[0];
           if (!m.message) return;
-          if (m.key.fromMe && !BotConfig.allowFromMe) return;
+
+          // Get current config for allowFromMe check
+          const config = await getCurrentConfig().catch(() => BotConfig);
+          if (m.key.fromMe && !config.allowFromMe) return;
 
           const text =
             m.message.conversation || m.message.extendedTextMessage?.text || "";
@@ -201,7 +204,7 @@ export class BotClient {
           const user = m.key.participant || jid;
 
           if (
-            BotConfig.allowMentionPrefix &&
+            config.allowMentionPrefix &&
             this.botId &&
             text.includes(`@${this.botId}`)
           ) {
@@ -211,7 +214,7 @@ export class BotClient {
             );
             if (commandText) {
               await this.commandHandler.handleCommand(
-                BotConfig.prefix + commandText,
+                config.prefix + commandText,
                 jid,
                 user,
                 this.sock!,
@@ -221,7 +224,7 @@ export class BotClient {
             return;
           }
 
-          if (this.commandHandler.isCommand(text)) {
+          if (await this.commandHandler.isCommand(text)) {
             await this.commandHandler.handleCommand(
               text,
               jid,

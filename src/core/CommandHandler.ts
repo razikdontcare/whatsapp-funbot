@@ -1,7 +1,7 @@
 import { CommandInterface } from "./CommandInterface.js";
 import { SessionService } from "../services/SessionService.js";
 import { CommandUsageService } from "../services/CommandUsageService.js";
-import { BotConfig, log, getUserRoles } from "./config.js";
+import { BotConfig, log, getUserRoles, getCurrentConfig } from "./config.js";
 import { WebSocketInfo } from "./types.js";
 import { CooldownManager } from "./CooldownManager.js";
 import { proto } from "baileys";
@@ -100,21 +100,26 @@ export class CommandHandler {
     return new info.commandClass();
   }
 
-  isCommand(text: string): boolean {
+  async isCommand(text: string): Promise<boolean> {
     if (!text) return false;
 
-    if (BotConfig.prefix && text.startsWith(BotConfig.prefix)) return true;
+    const config = await getCurrentConfig();
 
-    for (const prefix of BotConfig.alternativePrefixes) {
+    if (config.prefix && text.startsWith(config.prefix)) return true;
+
+    for (const prefix of config.alternativePrefixes) {
       if (text.startsWith(prefix)) return true;
     }
 
     return false;
   }
 
-  private extractCommand(text: string): { command: string; args: string[] } {
-    let usedPrefix = BotConfig.prefix;
-    for (const prefix of [BotConfig.prefix, ...BotConfig.alternativePrefixes]) {
+  private async extractCommand(
+    text: string
+  ): Promise<{ command: string; args: string[] }> {
+    const config = await getCurrentConfig();
+    let usedPrefix = config.prefix;
+    for (const prefix of [config.prefix, ...config.alternativePrefixes]) {
       if (text.startsWith(prefix)) {
         usedPrefix = prefix;
         break;
@@ -136,7 +141,7 @@ export class CommandHandler {
     msg: proto.IWebMessageInfo
   ): Promise<void> {
     try {
-      const { command, args } = this.extractCommand(text);
+      const { command, args } = await this.extractCommand(text);
 
       log.debug(
         `Handling command: ${command} with args: ${args.join(
@@ -169,13 +174,14 @@ export class CommandHandler {
       if (commandInfo) {
         // Permission check for requiredRoles (type-safe, supports multiple roles)
         if (commandInfo.requiredRoles && commandInfo.requiredRoles.length > 0) {
-          const userRoles = getUserRoles(user);
+          const userRoles = await getUserRoles(user);
           const hasRole = commandInfo.requiredRoles.some((role) =>
             userRoles.includes(role)
           );
           if (!hasRole) {
+            const config = await getCurrentConfig();
             await sock.sendMessage(jid, {
-              text: `${BotConfig.emoji.error} Kamu tidak memiliki izin untuk menggunakan perintah ini.`,
+              text: `${config.emoji.error} Kamu tidak memiliki izin untuk menggunakan perintah ini.`,
             });
             return;
           }
@@ -200,8 +206,9 @@ export class CommandHandler {
               actualCommand,
               cooldownTime
             );
+            const config = await getCurrentConfig();
             await sock.sendMessage(jid, {
-              text: `${BotConfig.emoji.error} Kamu terlalu cepat menggunakan perintah ini. Coba lagi dalam ${remainingTime} detik.`,
+              text: `${config.emoji.error} Kamu terlalu cepat menggunakan perintah ini. Coba lagi dalam ${remainingTime} detik.`,
             });
             return;
           }
@@ -364,21 +371,23 @@ export class CommandHandler {
       (cmd) => cmd.category === "game"
     );
 
+    const config = await getCurrentConfig();
+
     const gameList = gameCommands
       .map((game) => {
         let aliasText = "";
         if (game.aliases && game.aliases.length > 0) {
           aliasText = ` (alias: ${game.aliases
-            .map((a) => `*${BotConfig.prefix}${a}*`)
+            .map((a) => `*${config.prefix}${a}*`)
             .join(", ")})`;
         }
 
-        return `• *${BotConfig.prefix}${game.name}*${aliasText} - ${game.description}`;
+        return `• *${config.prefix}${game.name}*${aliasText} - ${game.description}`;
       })
       .join("\n");
 
     await sock.sendMessage(jid, {
-      text: `${BotConfig.emoji.games} Daftar Game yang Tersedia:\n${gameList}\n\nGunakan ${BotConfig.prefix}<nama game> start untuk memulai, atau ${BotConfig.prefix}help <nama game> untuk bantuan.`,
+      text: `${config.emoji.games} Daftar Game yang Tersedia:\n${gameList}\n\nGunakan ${config.prefix}<nama game> start untuk memulai, atau ${config.prefix}help <nama game> untuk bantuan.`,
     });
   }
 
@@ -388,14 +397,16 @@ export class CommandHandler {
     sock: WebSocketInfo
   ) {
     const session = await this.sessionService.getSession(jid, user);
+    const config = await getCurrentConfig();
+
     if (session) {
       await this.sessionService.clearSession(jid, user);
       await sock.sendMessage(jid, {
-        text: BotConfig.messages.gameStopped.replace("{game}", session.game),
+        text: config.messages.gameStopped.replace("{game}", session.game),
       });
     } else {
       await sock.sendMessage(jid, {
-        text: BotConfig.messages.noGameRunning,
+        text: config.messages.noGameRunning,
       });
     }
   }
@@ -405,6 +416,8 @@ export class CommandHandler {
     jid: string,
     sock: WebSocketInfo
   ) {
+    const config = await getCurrentConfig();
+
     if (args.length === 0) {
       const gameCommands: string[] = [];
       const generalCommands: string[] = [];
@@ -412,7 +425,7 @@ export class CommandHandler {
       const utilityCommands: string[] = [];
 
       for (const [_, info] of this.commands) {
-        const commandText = `*${BotConfig.prefix}${info.name}* - ${info.description}`;
+        const commandText = `*${config.prefix}${info.name}* - ${info.description}`;
 
         switch (info.category) {
           case "game":
@@ -430,21 +443,21 @@ export class CommandHandler {
         }
       }
 
-      let helpText = `${BotConfig.emoji.help} *Bantuan ${BotConfig.name} Bot*\n\n`;
+      let helpText = `${config.emoji.help} *Bantuan ${config.name} Bot*\n\n`;
 
       helpText += `*Perintah Inti:*\n`;
-      helpText += `*${BotConfig.prefix}games* - Melihat daftar game yang tersedia\n`;
-      helpText += `*${BotConfig.prefix}help [command]* - Menampilkan bantuan untuk command tertentu\n`;
-      helpText += `*${BotConfig.prefix}stop* - Menghentikan game yang sedang berjalan\n\n`;
+      helpText += `*${config.prefix}games* - Melihat daftar game yang tersedia\n`;
+      helpText += `*${config.prefix}help [command]* - Menampilkan bantuan untuk command tertentu\n`;
+      helpText += `*${config.prefix}stop* - Menghentikan game yang sedang berjalan\n\n`;
 
       if (gameCommands.length > 0) {
-        helpText += `*${BotConfig.emoji.games} Game:*\n${gameCommands.join(
+        helpText += `*${config.emoji.games} Game:*\n${gameCommands.join(
           "\n"
         )}\n\n`;
       }
 
       if (generalCommands.length > 0) {
-        helpText += `*${BotConfig.emoji.info} Umum:*\n${generalCommands.join(
+        helpText += `*${config.emoji.info} Umum:*\n${generalCommands.join(
           "\n"
         )}\n\n`;
       }
@@ -457,7 +470,7 @@ export class CommandHandler {
         helpText += `*Utilitas:*\n${utilityCommands.join("\n")}\n\n`;
       }
 
-      helpText += `Gunakan ${BotConfig.prefix}help [nama perintah] untuk informasi lebih detail.`;
+      helpText += `Gunakan ${config.prefix}help [nama perintah] untuk informasi lebih detail.`;
 
       await sock.sendMessage(jid, { text: helpText });
       return;
