@@ -33,7 +33,7 @@ const MULTIPLAYER_SESSION_KEY = "rps_multiplayer_game";
 // Key for the link session stored in a player's DM session map (using user JID as key)
 const LINK_SESSION_KEY = "rps";
 
-export class RockPaperScissorsGame implements CommandInterface {
+export class RockPaperScissorsGame extends CommandInterface {
   static commandInfo = {
     name: "rps",
     aliases: [],

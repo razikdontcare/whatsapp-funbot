@@ -17,7 +17,7 @@ type LyricsResponse = {
   syncedLyrics: string;
 };
 
-export class LyricsFindCommand implements CommandInterface {
+export class LyricsFindCommand extends CommandInterface {
   static commandInfo = {
     name: "lyrics",
     aliases: ["findlyrics", "lyric", "lirik"],

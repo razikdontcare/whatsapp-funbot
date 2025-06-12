@@ -127,7 +127,7 @@ async function initializeHangmanGames(
   }
 }
 
-export class HangmanGame implements CommandInterface {
+export class HangmanGame extends CommandInterface {
   static commandInfo = {
     name: "hangman",
     aliases: ["hm", "tebakkata"],

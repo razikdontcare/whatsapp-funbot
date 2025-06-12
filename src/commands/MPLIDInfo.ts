@@ -10,7 +10,7 @@ import {
   getTeamById,
 } from "../utils/mplid.js";
 
-export class MPLIDInfo implements CommandInterface {
+export class MPLIDInfo extends CommandInterface {
   static commandInfo = {
     name: "mplid",
     description: "Informasi tentang MPL Indonesia (MPLID)",

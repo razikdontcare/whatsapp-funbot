@@ -12,7 +12,7 @@ import { proto } from "baileys";
 
 const IMAGE_QUALITY = 80;
 
-export class FufufafaComments implements CommandInterface {
+export class FufufafaComments extends CommandInterface {
   static commandInfo = {
     name: "fufufafa",
     description:
