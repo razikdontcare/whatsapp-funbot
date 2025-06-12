@@ -7,6 +7,7 @@ import {
   getBotConfigService,
   getCurrentConfig,
   log,
+  BotConfig,
 } from "../core/config.js";
 import { BotConfigService } from "../services/BotConfigService.js";
 
@@ -242,7 +243,7 @@ export class ConfigCommand implements CommandInterface {
     const param = args[0].toLowerCase();
     const value = args.slice(1).join(" ");
 
-    let updateData: any = {};
+    let updateData = {} as Partial<typeof BotConfig>;
 
     switch (param) {
       case "prefix":
