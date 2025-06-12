@@ -11,6 +11,19 @@ import {
 import { BotConfigService } from "../services/BotConfigService.js";
 
 export class ConfigCommand implements CommandInterface {
+  static commandInfo = {
+    name: "config",
+    aliases: ["cfg", "konfig"],
+    description: "Manage bot configuration (admin only)",
+    helpText: `*Usage:*
+• config get [<parameter>] — Get current configuration or specific parameter
+• config set <parameter> <value> — Set a configuration parameter
+• config reset — Reset configuration to default values`,
+    category: "admin",
+    commandClass: ConfigCommand,
+    requiredRoles: ["admin"],
+  };
+
   async handleCommand(
     args: string[],
     jid: string,
