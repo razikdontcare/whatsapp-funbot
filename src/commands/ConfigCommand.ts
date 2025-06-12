@@ -7,9 +7,11 @@ import {
   getBotConfigService,
   getCurrentConfig,
   log,
-  BotConfig,
 } from "../core/config.js";
-import { BotConfigService } from "../services/BotConfigService.js";
+import {
+  BotConfigService,
+  StoredBotConfig,
+} from "../services/BotConfigService.js";
 
 export class ConfigCommand implements CommandInterface {
   static commandInfo = {
@@ -204,6 +206,9 @@ export class ConfigCommand implements CommandInterface {
         case "allowfromme":
           value = config.allowFromMe;
           break;
+        case "allowmentionprefix":
+          value = config.allowMentionPrefix;
+          break;
         case "admins":
           value = config.admins.join("\\n");
           break;
@@ -243,7 +248,7 @@ export class ConfigCommand implements CommandInterface {
     const param = args[0].toLowerCase();
     const value = args.slice(1).join(" ");
 
-    let updateData = {} as Partial<typeof BotConfig>;
+    let updateData = {} as Partial<StoredBotConfig>;
 
     switch (param) {
       case "prefix":
@@ -282,6 +287,11 @@ export class ConfigCommand implements CommandInterface {
         break;
       case "unknowncommandresponse":
         updateData.unknownCommandResponse = value;
+        break;
+      case "allowmentionprefix":
+        const allowMention =
+          value.toLowerCase() === "true" || value.toLowerCase() === "ya";
+        updateData.allowMentionPrefix = allowMention;
         break;
       default:
         await sock.sendMessage(chatId, {
