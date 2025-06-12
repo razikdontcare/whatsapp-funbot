@@ -33,7 +33,7 @@ export class RegisterGroupCommand implements CommandInterface {
       });
       return;
     }
-    if (!getUserRoles(user).includes("admin")) {
+    if (!(await getUserRoles(user)).includes("admin")) {
       await sock.sendMessage(jid, {
         text: "Only group admins can register the group.",
       });
