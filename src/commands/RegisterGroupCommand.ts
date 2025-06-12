@@ -9,7 +9,7 @@ import { proto } from "baileys";
 // Collection name for group registry
 const GROUP_REGISTRY_COLLECTION = "group_registry";
 
-export class RegisterGroupCommand implements CommandInterface {
+export class RegisterGroupCommand extends CommandInterface {
   static commandInfo = {
     name: "registergroup",
     description: "Register this group for scheduled tasks (admin only)",

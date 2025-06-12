@@ -6,7 +6,7 @@ import { SessionService } from "../services/SessionService.js";
 import { YtDlpWrapper } from "../utils/ytdlp.js";
 import extractUrlsFromText from "../utils/extractUrlsFromText.js";
 
-export class YTDLCommand implements CommandInterface {
+export class YTDLCommand extends CommandInterface {
   static commandInfo = {
     name: "ytdl",
     aliases: ["yt", "youtube", "dla"],

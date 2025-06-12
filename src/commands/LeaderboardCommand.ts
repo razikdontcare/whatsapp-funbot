@@ -5,7 +5,7 @@ import { WebSocketInfo } from "../core/types.js";
 import { GameLeaderboardService } from "../services/GameLeaderboardService.js";
 import { SessionService } from "../services/SessionService.js";
 
-export class LeaderboardCommand implements CommandInterface {
+export class LeaderboardCommand extends CommandInterface {
   static commandInfo = {
     name: "leaderboard",
     description: "Show the top players for a game (e.g., hangman, rps)",

@@ -54,7 +54,7 @@ type CobaltRequestBody = {
   localProcessing?: boolean;
 };
 
-export class DownloaderCommand implements CommandInterface {
+export class DownloaderCommand extends CommandInterface {
   static commandInfo = {
     name: "downloader",
     aliases: ["dl", "download"],

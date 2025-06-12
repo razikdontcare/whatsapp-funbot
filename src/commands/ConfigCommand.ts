@@ -13,7 +13,7 @@ import {
   StoredBotConfig,
 } from "../services/BotConfigService.js";
 
-export class ConfigCommand implements CommandInterface {
+export class ConfigCommand extends CommandInterface {
   static commandInfo = {
     name: "config",
     aliases: ["cfg", "konfig"],

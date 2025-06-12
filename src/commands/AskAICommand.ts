@@ -5,7 +5,7 @@ import { SessionService } from "../services/SessionService.js";
 import { BotConfig } from "../core/config.js";
 import Groq from "groq-sdk";
 
-export class AskAICommand implements CommandInterface {
+export class AskAICommand extends CommandInterface {
   static commandInfo = {
     name: "ai",
     aliases: ["ask"],
