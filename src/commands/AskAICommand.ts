@@ -54,7 +54,7 @@ export class AskAICommand extends CommandInterface {
         quotedText = quoted.imageMessage.caption;
       if (quotedText) {
         // If the quoted text is not empty, use it as the prompt
-        prompt = quotedText.trim();
+        prompt = quotedText.trim() + "\n\n" + prompt;
       }
     }
     if (!prompt) {
