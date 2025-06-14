@@ -2,17 +2,19 @@ import { proto } from "baileys";
 import { SessionService } from "../services/SessionService.js";
 import { WebSocketInfo } from "./types.js";
 
-export type CommandInfo = {
+export interface CommandInfo {
   name: string;
   aliases?: string[];
   description: string;
-  helpText: string;
-  category: string;
-  commandClass: typeof CommandInterface;
+  helpText?: string; // Inline command documentation
+  category: "game" | "general" | "admin" | "utility";
+  commandClass: new () => CommandInterface;
   cooldown?: number;
   maxUses?: number;
-  requiredRoles?: string[];
-};
+  requiredRoles?: import("./config.js").UserRole[];
+  disabled?: boolean;
+  disabledReason?: string;
+}
 
 export interface BaseInterface {
   handleCommand(

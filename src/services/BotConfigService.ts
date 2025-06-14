@@ -14,6 +14,7 @@ export interface StoredBotConfig {
   maxSessions?: number;
   sessionTimeout?: number;
   allowFromMe?: boolean;
+  disableWarning?: boolean; // Disable warning to users when using commands
 
   // Game Settings
   defaultGameHelp?: string;
@@ -150,6 +151,7 @@ export class BotConfigService {
       maxSessions: storedConfig.maxSessions ?? BotConfig.maxSessions,
       sessionTimeout: storedConfig.sessionTimeout ?? BotConfig.sessionTimeout,
       allowFromMe: storedConfig.allowFromMe ?? BotConfig.allowFromMe,
+      disableWarning: storedConfig.disableWarning ?? BotConfig.disableWarning,
       defaultGameHelp:
         storedConfig.defaultGameHelp ?? BotConfig.defaultGameHelp,
       unknownCommandResponse:
@@ -303,6 +305,7 @@ export class BotConfigService {
       maxSessions: BotConfig.maxSessions,
       sessionTimeout: BotConfig.sessionTimeout,
       allowFromMe: BotConfig.allowFromMe,
+      disableWarning: BotConfig.disableWarning,
       defaultGameHelp: BotConfig.defaultGameHelp,
       unknownCommandResponse: BotConfig.unknownCommandResponse,
       emoji: BotConfig.emoji,

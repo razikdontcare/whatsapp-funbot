@@ -1,4 +1,4 @@
-import { CommandInterface } from "../core/CommandInterface.js";
+import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
 import { WebSocketInfo } from "../core/types.js";
 import { SessionService } from "../services/SessionService.js";
 import { proto } from "baileys";
@@ -14,7 +14,7 @@ import {
 } from "../services/BotConfigService.js";
 
 export class ConfigCommand extends CommandInterface {
-  static commandInfo = {
+  static commandInfo: CommandInfo = {
     name: "config",
     aliases: ["cfg", "konfig"],
     description: "Manage bot configuration (admin only)",
@@ -163,6 +163,7 @@ export class ConfigCommand extends CommandInterface {
 • Max Sessions: ${config.maxSessions}
 • Session Timeout: ${config.sessionTimeout / 1000}s
 • Allow From Me: ${config.allowFromMe ? "Ya" : "Tidak"}
+• Disable Warning: ${config.disableWarning ? "Ya" : "Tidak"}
 
 *Game Settings:*
 • Default Game Help: ${config.defaultGameHelp}
@@ -208,6 +209,9 @@ export class ConfigCommand extends CommandInterface {
           break;
         case "allowmentionprefix":
           value = config.allowMentionPrefix;
+          break;
+        case "disablewarning":
+          value = config.disableWarning;
           break;
         case "admins":
           value = config.admins.join("\\n");
@@ -292,6 +296,11 @@ export class ConfigCommand extends CommandInterface {
         const allowMention =
           value.toLowerCase() === "true" || value.toLowerCase() === "ya";
         updateData.allowMentionPrefix = allowMention;
+        break;
+      case "disablewarning":
+        const disableWarning =
+          value.toLowerCase() === "true" || value.toLowerCase() === "ya";
+        updateData.disableWarning = disableWarning;
         break;
       default:
         await sock.sendMessage(chatId, {
@@ -408,6 +417,8 @@ export class ConfigCommand extends CommandInterface {
 • \`config set maxsessions <number>\` - Ubah max sessions
 • \`config set sessiontimeout <ms>\` - Ubah timeout session
 • \`config set allowfromme <true/false>\` - Izinkan command dari bot
+• \`config set allowmentionprefix <true/false>\` - Izinkan mention prefix
+• \`config set disablewarning <true/false>\` - Aktifkan/Nonaktifkan warning
 • \`config set defaultgamehelp <text>\` - Ubah pesan help game
 • \`config set unknowncommandresponse <text>\` - Ubah pesan command tidak dikenal
 

@@ -1,4 +1,4 @@
-import { CommandInterface } from "./CommandInterface.js";
+import { CommandInterface, CommandInfo } from "./CommandInterface.js";
 import { SessionService } from "../services/SessionService.js";
 import { CommandUsageService } from "../services/CommandUsageService.js";
 import { log, getUserRoles, getCurrentConfig } from "./config.js";
@@ -13,18 +13,6 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-export interface CommandInfo {
-  name: string;
-  aliases?: string[];
-  description: string;
-  helpText?: string; // Inline command documentation
-  category: "game" | "general" | "admin" | "utility";
-  commandClass: new () => CommandInterface;
-  cooldown?: number;
-  maxUses?: number;
-  requiredRoles?: import("./config.js").UserRole[];
-}
 
 export class CommandHandler {
   private commands: Map<string, CommandInfo> = new Map();
@@ -173,6 +161,14 @@ export class CommandHandler {
 
       const commandInfo = this.getCommandInfo(command);
       if (commandInfo) {
+        if (commandInfo.disabled) {
+          const reason =
+            commandInfo.disabledReason || "Tidak ada alasan yang diberikan.";
+          await sock.sendMessage(jid, {
+            text: `${config.emoji.error} Perintah *${commandInfo.name}* telah dinonaktifkan. Alasan: ${reason}`,
+          });
+          return;
+        }
         // Permission check for requiredRoles (type-safe, supports multiple roles)
         if (commandInfo.requiredRoles && commandInfo.requiredRoles.length > 0) {
           const userRoles = await getUserRoles(user);

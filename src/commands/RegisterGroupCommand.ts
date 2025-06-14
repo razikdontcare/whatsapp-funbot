@@ -1,4 +1,4 @@
-import { CommandInterface } from "../core/CommandInterface.js";
+import { CommandInterface, CommandInfo } from "../core/CommandInterface.js";
 import { getMongoClient } from "../core/mongo.js";
 import { Collection, MongoClient } from "mongodb";
 import { getUserRoles } from "../core/config.js";
@@ -10,7 +10,7 @@ import { proto } from "baileys";
 const GROUP_REGISTRY_COLLECTION = "group_registry";
 
 export class RegisterGroupCommand extends CommandInterface {
-  static commandInfo = {
+  static commandInfo: CommandInfo = {
     name: "registergroup",
     description: "Register this group for scheduled tasks (admin only)",
     helpText: `*Usage:*\n!registergroup\nRegister this group so it receives scheduled messages (admin only).`,

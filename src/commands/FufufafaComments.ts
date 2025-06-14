@@ -1,5 +1,5 @@
 import axios from "axios";
-import { CommandInterface } from "../core/CommandInterface.js";
+import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
 import { BotConfig, log } from "../core/config.js";
 import { WebSocketInfo } from "../core/types.js";
 import { SessionService } from "../services/SessionService.js";
@@ -13,7 +13,7 @@ import { proto } from "baileys";
 const IMAGE_QUALITY = 80;
 
 export class FufufafaComments extends CommandInterface {
-  static commandInfo = {
+  static commandInfo: CommandInfo = {
     name: "fufufafa",
     description:
       "Komentar random dari akun Kaskus Fufufafa. (Total 699 komentar)",
