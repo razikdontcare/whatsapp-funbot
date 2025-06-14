@@ -17,7 +17,7 @@ import { Boom } from "@hapi/boom";
 import { log } from "./config.js";
 import { useMongoDBAuthState } from "./auth.js";
 import MAIN_LOGGER from "baileys/lib/Utils/logger.js";
-import { getMongoClient } from "./mongo.js";
+import { closeMongoClient, getMongoClient } from "./mongo.js";
 import NodeCache from "node-cache";
 
 const logger = MAIN_LOGGER.default.child({});
@@ -254,6 +254,7 @@ export class BotClient {
         setTimeout(() => this.start(), delay);
       } else {
         log.error("Too many restart attempts, giving up.");
+        await closeMongoClient();
       }
     }
   }
@@ -302,6 +303,7 @@ export class BotClient {
       setTimeout(() => this.start(), 5000);
     } catch (error) {
       log.error("Error during logout:", error);
+      await closeMongoClient();
       process.exit(1); // Force exit on critical error
     }
   }
