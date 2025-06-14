@@ -138,6 +138,9 @@ export class CommandHandler {
         )} for ${user} ${jid.endsWith("@g.us") ? "in " + jid : ""}`
       );
 
+      await sock.readMessages([msg.key]);
+      await sock.sendPresenceUpdate("composing", jid);
+
       // Handle built-in commands
       if (command === "games") {
         await this.listGames(jid, sock);
@@ -253,6 +256,8 @@ export class CommandHandler {
             msg
           );
         }
+
+        await sock.sendPresenceUpdate("available", jid);
       } else {
         await sock.sendMessage(jid, {
           text: config.unknownCommandResponse.replace(
@@ -260,6 +265,7 @@ export class CommandHandler {
             config.prefix
           ),
         });
+        await sock.sendPresenceUpdate("available", jid);
       }
     } catch (error) {
       log.error(`Error handling command: ${error}`);
@@ -267,6 +273,7 @@ export class CommandHandler {
       await sock.sendMessage(jid, {
         text: config.messages.commandError,
       });
+      await sock.sendPresenceUpdate("available", jid);
     }
   }
 

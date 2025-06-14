@@ -231,7 +231,6 @@ export class BotClient {
             }
 
             if (await this.commandHandler.isCommand(text)) {
-              // await this.sock.
               await this.commandHandler.handleCommand(
                 text,
                 jid,
