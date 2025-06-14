@@ -95,7 +95,7 @@ export class AskAICommand extends CommandInterface {
             content: prompt.trim(),
           },
         ],
-        model: "qwen-qwq-32b",
+        model: "qwen/qwen3-32b",
         temperature: 0.6,
         max_completion_tokens: 4096,
         top_p: 0.95,
