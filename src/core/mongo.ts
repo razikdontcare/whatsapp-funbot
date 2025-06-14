@@ -12,6 +12,9 @@ export async function getMongoClient(): Promise<MongoClient> {
   try {
     await client.db("admin").command({ ping: 1 });
   } catch (error) {
+    if (client) {
+      await client.close().catch(() => {});
+    }
     client = new MongoClient(process.env.MONGO_URI!);
     await client.connect();
   }

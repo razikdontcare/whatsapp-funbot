@@ -61,6 +61,12 @@ export class BotClient {
 
       // Connect to MongoDB and initialize auth state
       log.info("Initializing WhatsApp connection...");
+
+      if (this.sock) {
+        this.sock.end(new Error("Restarting connection"));
+        this.sock = null;
+      }
+
       try {
         // Use shared MongoClient for usage stats and auth
         this.mongoClient = await getMongoClient();
@@ -111,14 +117,14 @@ export class BotClient {
           this.sessionService,
           this.usageService
         );
+
+        this.store.bind(this.sock.ev);
       } catch (error) {
         log.error("Failed to initialize WhatsApp session:", error);
         // Wait before trying to reconnect
         setTimeout(() => this.start(), RECONNECT_INTERVAL);
         return;
       }
-
-      this.store.bind(this.sock.ev);
 
       // Handle connection updates
       this.sock.ev.on("connection.update", (update) => {
@@ -159,11 +165,7 @@ export class BotClient {
                 }/${MAX_RECONNECT_ATTEMPTS}) in ${Math.round(delay / 1000)}s...`
               );
 
-              // Clean up existing socket before reconnecting
-              if (this.sock) {
-                this.sock.end(lastDisconnect?.error);
-                this.sock = null;
-              }
+              this.cleanupSocket();
 
               setTimeout(() => this.start(), delay);
             } else {
@@ -268,6 +270,17 @@ export class BotClient {
     return match ? match[1].trim() : null;
   }
 
+  private cleanupSocket() {
+    if (this.sock) {
+      try {
+        this.sock.end(new Error("Connection cleanup"));
+      } catch (error) {
+        log.warn("Error during socket cleanup:", error);
+      }
+      this.sock = null;
+    }
+  }
+
   private async resetAndLogout() {
     if (!this.authState) return;
 
@@ -275,10 +288,7 @@ export class BotClient {
       const { removeCreds, close } = this.authState;
 
       // End WebSocket connection if it exists
-      if (this.sock) {
-        this.sock.end(new Error("Manual logout triggered"));
-        this.sock = null;
-      }
+      this.cleanupSocket();
 
       // Clean up credentials
       await Promise.all([
