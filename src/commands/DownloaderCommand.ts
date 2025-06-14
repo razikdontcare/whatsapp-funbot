@@ -1,7 +1,7 @@
 import axios, { AxiosResponse } from "axios";
 import { proto } from "baileys";
-import { CommandInterface } from "../core/CommandInterface.js";
-import { BotConfig, log } from "../core/config.js";
+import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
+import { BotConfig, getCurrentConfig, log } from "../core/config.js";
 import { WebSocketInfo } from "../core/types.js";
 import { SessionService } from "../services/SessionService.js";
 import extractUrlsFromText from "../utils/extractUrlsFromText.js";
@@ -55,7 +55,7 @@ type CobaltRequestBody = {
 };
 
 export class DownloaderCommand extends CommandInterface {
-  static commandInfo = {
+  static commandInfo: CommandInfo = {
     name: "downloader",
     aliases: ["dl", "download"],
     description: "Download video atau gambar dari platform yang didukung.",
@@ -90,6 +90,7 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
     sessionService: SessionService,
     msg: proto.IWebMessageInfo
   ): Promise<void> {
+    const config = await getCurrentConfig();
     // 1. Handle help and url subcommands first
     if (args.length > 0 && args[0] === "help") {
       await sock.sendMessage(jid, {
@@ -108,9 +109,11 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
       return;
     }
 
-    await sock.sendMessage(jid, {
-      text: `*Info:* Platform YouTube dengan command ini sedang bermasalah, gunakan alternatif "${BotConfig.prefix}dla" untuk mengunduh video/audio YouTube.`,
-    });
+    if (!config.disableWarning) {
+      await sock.sendMessage(jid, {
+        text: `*Info:* Platform YouTube dengan command ini sedang bermasalah, gunakan alternatif "${BotConfig.prefix}dla" untuk mengunduh video/audio YouTube.`,
+      });
+    }
 
     const downloadMode = args.includes("audio")
       ? "audio"

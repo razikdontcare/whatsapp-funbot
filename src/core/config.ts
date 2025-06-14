@@ -20,6 +20,7 @@ export const BotConfig = {
   sessionTimeout: 3600000, // Waktu timeout session dalam milidetik (1 jam)
   sessionName: "meowbot", // Nama session untuk penyimpanan (hindari spasi dan karakter khusus)
   allowFromMe: false, // Izinkan bot untuk handle command dari dirinya sendiri
+  disableWarning: false, // Nonaktifkan peringatan ke pengguna saat penggunaan command
 
   // Pengaturan Game
   defaultGameHelp: "Ketikan {prefix}games untuk melihat daftar game.",

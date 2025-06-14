@@ -1,4 +1,4 @@
-import { CommandInterface } from "../core/CommandInterface.js";
+import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
 import { BotConfig, log } from "../core/config.js";
 import { WebSocketInfo } from "../core/types.js";
 import { SessionService } from "../services/SessionService.js";
@@ -11,7 +11,7 @@ import {
 } from "../utils/mplid.js";
 
 export class MPLIDInfo extends CommandInterface {
-  static commandInfo = {
+  static commandInfo: CommandInfo = {
     name: "mplid",
     description: "Informasi tentang MPL Indonesia (MPLID)",
     helpText: `*Penggunaan:*
@@ -29,6 +29,8 @@ ID Tim adalah singkatan nama tiap tim, contoh: "alter ego esports" memiliki ID "
     commandClass: MPLIDInfo,
     cooldown: 5000,
     maxUses: 3,
+    disabled: true,
+    disabledReason: "Malas update buat data Playoff",
   };
   async handleCommand(
     args: string[],

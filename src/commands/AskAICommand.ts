@@ -1,12 +1,12 @@
 import { proto } from "baileys";
-import { CommandInterface } from "../core/CommandInterface.js";
+import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
 import { WebSocketInfo } from "../core/types.js";
 import { SessionService } from "../services/SessionService.js";
 import { BotConfig } from "../core/config.js";
 import Groq from "groq-sdk";
 
 export class AskAICommand extends CommandInterface {
-  static commandInfo = {
+  static commandInfo: CommandInfo = {
     name: "ai",
     aliases: ["ask"],
     description: "Tanyakan sesuatu kepada AI.",

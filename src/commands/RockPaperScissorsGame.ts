@@ -1,4 +1,4 @@
-import { CommandInterface } from "../core/CommandInterface.js";
+import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
 import { SessionService } from "../services/SessionService.js";
 import { BotConfig, log } from "../core/config.js";
 import { WebSocketInfo, Session } from "../core/types.js";
@@ -34,7 +34,7 @@ const MULTIPLAYER_SESSION_KEY = "rps_multiplayer_game";
 const LINK_SESSION_KEY = "rps";
 
 export class RockPaperScissorsGame extends CommandInterface {
-  static commandInfo = {
+  static commandInfo: CommandInfo = {
     name: "rps",
     aliases: [],
     description: "Batu-Gunting-Kertas (vs AI/Multiplayer)",

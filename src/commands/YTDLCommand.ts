@@ -1,13 +1,13 @@
 import { proto } from "baileys";
-import { CommandInterface } from "../core/CommandInterface.js";
-import { BotConfig, log } from "../core/config.js";
+import { CommandInterface, CommandInfo } from "../core/CommandInterface.js";
+import { BotConfig, getCurrentConfig, log } from "../core/config.js";
 import { WebSocketInfo } from "../core/types.js";
 import { SessionService } from "../services/SessionService.js";
 import { YtDlpWrapper } from "../utils/ytdlp.js";
 import extractUrlsFromText from "../utils/extractUrlsFromText.js";
 
 export class YTDLCommand extends CommandInterface {
-  static commandInfo = {
+  static commandInfo: CommandInfo = {
     name: "ytdl",
     aliases: ["yt", "youtube", "dla"],
     description:
@@ -59,6 +59,7 @@ export class YTDLCommand extends CommandInterface {
     sessionService: SessionService,
     msg: proto.IWebMessageInfo
   ): Promise<void> {
+    const config = await getCurrentConfig();
     if (args.length > 0 && args[0] === "help") {
       await sock.sendMessage(jid, {
         text: `Usage: ${YTDLCommand.commandInfo.helpText}`,
@@ -69,13 +70,15 @@ export class YTDLCommand extends CommandInterface {
     const downloadMode = args.includes("audio") ? "audio" : "video";
     log.info("Download mode set to:", downloadMode);
 
-    await sock.sendMessage(jid, {
-      text: `*Info Penting:*\nCommand ini sedang dalam tahap pengembangan. Proses pengunduhan mungkin memerlukan waktu yang lama tergantung pada ukuran file dan kecepatan koneksi server. 
-
-Video akan diunduh dengan kualitas maksimal 1080p untuk mengoptimalkan ukuran file dan kecepatan download.
-
-Gunakan command ini hanya jika media yang diunduh dengan "${BotConfig.prefix}dl" tidak berhasil.\n\nDemi kenyamanan, proses pengunduhan akan dibatasi maksimal 5 menit. Jika file terlalu besar, silakan gunakan command "${BotConfig.prefix}dl" untuk mengunduh media yang lebih besar.`,
-    });
+    if (!config.disableWarning) {
+      await sock.sendMessage(jid, {
+        text: `*Info Penting:*\nCommand ini sedang dalam tahap pengembangan. Proses pengunduhan mungkin memerlukan waktu yang lama tergantung pada ukuran file dan kecepatan koneksi server. 
+  
+  Video akan diunduh dengan kualitas maksimal 1080p untuk mengoptimalkan ukuran file dan kecepatan download.
+  
+  Gunakan command ini hanya jika media yang diunduh dengan "${BotConfig.prefix}dl" tidak berhasil.\n\nDemi kenyamanan, proses pengunduhan akan dibatasi maksimal 5 menit. Jika file terlalu besar, silakan gunakan command "${BotConfig.prefix}dl" untuk mengunduh media yang lebih besar.`,
+      });
+    }
 
     // 2. Try to extract URL from args or quoted message
     let url = extractUrlsFromText(args.join(" "))[0] || null;

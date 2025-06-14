@@ -1,6 +1,6 @@
 import { BotConfig, log } from "../core/config.js";
 import { SessionService } from "../services/SessionService.js";
-import { CommandInterface } from "../core/CommandInterface.js";
+import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
 import { WebSocketInfo, Session } from "../core/types.js";
 import { getRandomKBBI } from "../utils/randomKBBI.js";
 import { randomBytes } from "crypto";
@@ -128,7 +128,7 @@ async function initializeHangmanGames(
 }
 
 export class HangmanGame extends CommandInterface {
-  static commandInfo = {
+  static commandInfo: CommandInfo = {
     name: "hangman",
     aliases: ["hm", "tebakkata"],
     description:
