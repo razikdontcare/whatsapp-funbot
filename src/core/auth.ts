@@ -29,11 +29,8 @@ export const useMongoDBAuthState = async (
   log.debug("Connecting to " + dbName + " database");
   log.debug("Using collection prefix: " + collectionPrefix);
   // Use provided client or create a new one
-  let client: MongoClient | null = null;
-  if (!client) {
-    client = await getMongoClient();
-    log.info("MongoDB connection established successfully");
-  }
+  let client = await getMongoClient();
+  log.info("MongoDB connection established successfully");
   // if (!client) {
   //   try {
   //     await client.connect();
@@ -108,6 +105,8 @@ export const useMongoDBAuthState = async (
       800
     );
 
+    console.debug("Loaded credentials document:", credsDoc);
+
     creds = credsDoc?.data
       ? deserializeData<AuthenticationCreds>(credsDoc.data) || initAuthCreds()
       : initAuthCreds();
@@ -130,6 +129,11 @@ export const useMongoDBAuthState = async (
           if (!ids.length) return data;
 
           try {
+            const client = await getMongoClient();
+            const collection = client
+              .db(dbName)
+              .collection<AuthDocument>(`${collectionPrefix}keys`);
+
             const docs = await retryOperation(
               () =>
                 collections.keys
@@ -171,6 +175,11 @@ export const useMongoDBAuthState = async (
           if (!data || Object.keys(data).length === 0) {
             return; // Skip if no data to set
           }
+
+          const client = await getMongoClient();
+          const collection = client
+            .db(dbName)
+            .collection<AuthDocument>(`${collectionPrefix}keys`);
 
           const bulkOps: any[] = [];
 
@@ -239,6 +248,11 @@ export const useMongoDBAuthState = async (
     },
     saveCreds: async () => {
       try {
+        const client = await getMongoClient();
+        const collection = client
+          .db(dbName)
+          .collection<AuthDocument>(`${collectionPrefix}keys`);
+
         await retryOperation(
           () =>
             collections.creds.updateOne(
@@ -257,6 +271,14 @@ export const useMongoDBAuthState = async (
     },
     removeCreds: async () => {
       try {
+        const client = await getMongoClient();
+        const credsCollection = client
+          .db(dbName)
+          .collection<AuthDocument>(`${collectionPrefix}creds`);
+        const keysCollection = client
+          .db(dbName)
+          .collection<AuthDocument>(`${collectionPrefix}keys`);
+
         await Promise.all([
           retryOperation(() => collections.creds.deleteMany({}), 3, 800),
           retryOperation(() => collections.keys.deleteMany({}), 3, 800),
@@ -269,13 +291,9 @@ export const useMongoDBAuthState = async (
       }
     },
     close: async () => {
-      try {
-        await client?.close();
-        client = null; // Clear the client reference
-        log.info("MongoDB connection closed");
-      } catch (error) {
-        log.error("Error closing MongoDB connection:", error);
-      }
+      log.info(
+        "Auth service cleanup completed (shared connection remains open)"
+      );
     },
   };
 };

@@ -17,7 +17,7 @@ import { Boom } from "@hapi/boom";
 import { log } from "./config.js";
 import { useMongoDBAuthState } from "./auth.js";
 import MAIN_LOGGER from "baileys/lib/Utils/logger.js";
-import { getMongoClient } from "./mongo.js";
+import { closeMongoClient, getMongoClient } from "./mongo.js";
 import NodeCache from "node-cache";
 
 const logger = MAIN_LOGGER.default.child({});
@@ -43,7 +43,7 @@ export class BotClient {
   private usageService: CommandUsageService | null = null;
   private mongoClient: MongoClient | null = null;
   private store = makeInMemoryStore({ logger });
-  private groupCache = new NodeCache({});
+  private groupCache = new NodeCache({ stdTTL: 5 * 60, useClones: false });
 
   constructor() {
     this.sessionService = new SessionService();
@@ -61,6 +61,12 @@ export class BotClient {
 
       // Connect to MongoDB and initialize auth state
       log.info("Initializing WhatsApp connection...");
+
+      if (this.sock) {
+        this.sock.end(new Error("Restarting connection"));
+        this.sock = null;
+      }
+
       try {
         // Use shared MongoClient for usage stats and auth
         this.mongoClient = await getMongoClient();
@@ -87,8 +93,9 @@ export class BotClient {
           connectTimeoutMs: 60000, // Allow more time for initial connection
           keepAliveIntervalMs: 10000, // More frequent keep-alive pings
           retryRequestDelayMs: 2000, // Retry delay for failed requests
-          shouldIgnoreJid: (jid) => isJidBroadcast(jid),
           browser: Browsers.macOS("Desktop"),
+          markOnlineOnConnect: true,
+          shouldIgnoreJid: (jid) => isJidBroadcast(jid),
           patchMessageBeforeSending: (message, jids) => {
             // The function should only return the modified message, not an array
             // We'll just keep the original message unchanged
@@ -111,14 +118,14 @@ export class BotClient {
           this.sessionService,
           this.usageService
         );
+
+        this.store.bind(this.sock.ev);
       } catch (error) {
         log.error("Failed to initialize WhatsApp session:", error);
         // Wait before trying to reconnect
         setTimeout(() => this.start(), RECONNECT_INTERVAL);
         return;
       }
-
-      this.store.bind(this.sock.ev);
 
       // Handle connection updates
       this.sock.ev.on("connection.update", (update) => {
@@ -159,11 +166,7 @@ export class BotClient {
                 }/${MAX_RECONNECT_ATTEMPTS}) in ${Math.round(delay / 1000)}s...`
               );
 
-              // Clean up existing socket before reconnecting
-              if (this.sock) {
-                this.sock.end(lastDisconnect?.error);
-                this.sock = null;
-              }
+              this.cleanupSocket();
 
               setTimeout(() => this.start(), delay);
             } else {
@@ -189,52 +192,70 @@ export class BotClient {
 
       this.sock.ev.on("creds.update", this.authState.saveCreds);
 
-      this.sock.ev.on("messages.upsert", async ({ messages }) => {
+      this.sock.ev.on("messages.upsert", async ({ messages, type }) => {
         try {
-          const m = messages[0];
-          if (!m.message) return;
+          if (type != "notify") return;
+          for (const m of messages) {
+            if (!m.message) continue;
 
-          // Get current config for allowFromMe check
-          const config = await getCurrentConfig().catch(() => BotConfig);
-          if (m.key.fromMe && !config.allowFromMe) return;
+            // Get current config for allowFromMe check
+            const config = await getCurrentConfig().catch(() => BotConfig);
+            if (m.key.fromMe && !config.allowFromMe) continue;
 
-          const text =
-            m.message.conversation || m.message.extendedTextMessage?.text || "";
-          const jid = m.key.remoteJid!;
-          const user = m.key.participant || jid;
+            const text =
+              m.message.conversation ||
+              m.message.extendedTextMessage?.text ||
+              "";
+            const jid = m.key.remoteJid!;
+            const user = m.key.participant || jid;
 
-          if (
-            config.allowMentionPrefix &&
-            this.botId &&
-            text.includes(`@${this.botId}`)
-          ) {
-            const commandText = this.extractCommandFromMention(
-              text,
-              this.botId
-            );
-            if (commandText) {
+            if (
+              config.allowMentionPrefix &&
+              this.botId &&
+              text.includes(`@${this.botId}`)
+            ) {
+              const commandText = this.extractCommandFromMention(
+                text,
+                this.botId
+              );
+              if (commandText) {
+                await this.commandHandler.handleCommand(
+                  config.prefix + commandText,
+                  jid,
+                  user,
+                  this.sock!,
+                  m
+                );
+              }
+              continue;
+            }
+
+            if (await this.commandHandler.isCommand(text)) {
               await this.commandHandler.handleCommand(
-                config.prefix + commandText,
+                text,
                 jid,
                 user,
                 this.sock!,
                 m
               );
             }
-            return;
-          }
-
-          if (await this.commandHandler.isCommand(text)) {
-            await this.commandHandler.handleCommand(
-              text,
-              jid,
-              user,
-              this.sock!,
-              m
-            );
           }
         } catch (error) {
           log.error("Error handling message: ", error);
+        }
+      });
+
+      this.sock.ev.on("groups.update", async ([event]) => {
+        if (this.sock && event.id) {
+          const metadata = await this.sock.groupMetadata(event.id);
+          this.groupCache.set(event.id, metadata);
+        }
+      });
+
+      this.sock.ev.on("group-participants.update", async (event) => {
+        if (this.sock && event.id) {
+          const metadata = await this.sock.groupMetadata(event.id);
+          this.groupCache.set(event.id, metadata);
         }
       });
     } catch (error) {
@@ -254,6 +275,7 @@ export class BotClient {
         setTimeout(() => this.start(), delay);
       } else {
         log.error("Too many restart attempts, giving up.");
+        await closeMongoClient();
       }
     }
   }
@@ -267,6 +289,17 @@ export class BotClient {
     return match ? match[1].trim() : null;
   }
 
+  private cleanupSocket() {
+    if (this.sock) {
+      try {
+        this.sock.end(new Error("Connection cleanup"));
+      } catch (error) {
+        log.warn("Error during socket cleanup:", error);
+      }
+      this.sock = null;
+    }
+  }
+
   private async resetAndLogout() {
     if (!this.authState) return;
 
@@ -274,10 +307,7 @@ export class BotClient {
       const { removeCreds, close } = this.authState;
 
       // End WebSocket connection if it exists
-      if (this.sock) {
-        this.sock.end(new Error("Manual logout triggered"));
-        this.sock = null;
-      }
+      this.cleanupSocket();
 
       // Clean up credentials
       await Promise.all([
@@ -302,6 +332,7 @@ export class BotClient {
       setTimeout(() => this.start(), 5000);
     } catch (error) {
       log.error("Error during logout:", error);
+      await closeMongoClient();
       process.exit(1); // Force exit on critical error
     }
   }

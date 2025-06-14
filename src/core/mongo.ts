@@ -8,5 +8,26 @@ export async function getMongoClient(): Promise<MongoClient> {
     client = new MongoClient(uri);
     await client.connect();
   }
+
+  try {
+    await client.db("admin").command({ ping: 1 });
+  } catch (error) {
+    if (client) {
+      await client.close().catch(() => {});
+    }
+    client = new MongoClient(process.env.MONGO_URI!);
+    await client.connect();
+  }
   return client;
+}
+
+export async function closeMongoClient(): Promise<void> {
+  if (client) {
+    await client.close();
+    client = null;
+  }
+}
+
+export function isMongoConnected(): boolean {
+  return client !== null;
 }

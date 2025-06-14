@@ -12,7 +12,7 @@ export const BotConfig = {
   // Pengaturan Prefix
   prefix: "!",
   alternativePrefixes: ["/", "."],
-  allowMentionPrefix: true, // Aktifkan untuk mengizinkan prefix mention (@bot command)
+  allowMentionPrefix: false, // Aktifkan untuk mengizinkan prefix mention (@bot command)
 
   // Pengaturan Umum
   name: "MeoW",
