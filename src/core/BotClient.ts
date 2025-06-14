@@ -195,48 +195,51 @@ export class BotClient {
       this.sock.ev.on("messages.upsert", async ({ messages, type }) => {
         try {
           if (type != "notify") return;
-          const m = messages[0];
-          if (!m.message) return;
+          for (const m of messages) {
+            if (!m.message) return;
 
-          // Get current config for allowFromMe check
-          const config = await getCurrentConfig().catch(() => BotConfig);
-          if (m.key.fromMe && !config.allowFromMe) return;
+            // Get current config for allowFromMe check
+            const config = await getCurrentConfig().catch(() => BotConfig);
+            if (m.key.fromMe && !config.allowFromMe) return;
 
-          const text =
-            m.message.conversation || m.message.extendedTextMessage?.text || "";
-          const jid = m.key.remoteJid!;
-          const user = m.key.participant || jid;
+            const text =
+              m.message.conversation ||
+              m.message.extendedTextMessage?.text ||
+              "";
+            const jid = m.key.remoteJid!;
+            const user = m.key.participant || jid;
 
-          if (
-            config.allowMentionPrefix &&
-            this.botId &&
-            text.includes(`@${this.botId}`)
-          ) {
-            const commandText = this.extractCommandFromMention(
-              text,
-              this.botId
-            );
-            if (commandText) {
+            if (
+              config.allowMentionPrefix &&
+              this.botId &&
+              text.includes(`@${this.botId}`)
+            ) {
+              const commandText = this.extractCommandFromMention(
+                text,
+                this.botId
+              );
+              if (commandText) {
+                await this.commandHandler.handleCommand(
+                  config.prefix + commandText,
+                  jid,
+                  user,
+                  this.sock!,
+                  m
+                );
+              }
+              return;
+            }
+
+            if (await this.commandHandler.isCommand(text)) {
+              // await this.sock.
               await this.commandHandler.handleCommand(
-                config.prefix + commandText,
+                text,
                 jid,
                 user,
                 this.sock!,
                 m
               );
             }
-            return;
-          }
-
-          if (await this.commandHandler.isCommand(text)) {
-            // await this.sock.
-            await this.commandHandler.handleCommand(
-              text,
-              jid,
-              user,
-              this.sock!,
-              m
-            );
           }
         } catch (error) {
           log.error("Error handling message: ", error);
