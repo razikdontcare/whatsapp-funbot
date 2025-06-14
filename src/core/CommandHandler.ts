@@ -256,8 +256,6 @@ export class CommandHandler {
             msg
           );
         }
-
-        await sock.sendPresenceUpdate("available", jid);
       } else {
         await sock.sendMessage(jid, {
           text: config.unknownCommandResponse.replace(
@@ -265,8 +263,8 @@ export class CommandHandler {
             config.prefix
           ),
         });
-        await sock.sendPresenceUpdate("available", jid);
       }
+      await sock.sendPresenceUpdate("available", jid);
     } catch (error) {
       log.error(`Error handling command: ${error}`);
       const config = await getCurrentConfig();
