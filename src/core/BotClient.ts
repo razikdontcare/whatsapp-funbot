@@ -196,11 +196,11 @@ export class BotClient {
         try {
           if (type != "notify") return;
           for (const m of messages) {
-            if (!m.message) return;
+            if (!m.message) continue;
 
             // Get current config for allowFromMe check
             const config = await getCurrentConfig().catch(() => BotConfig);
-            if (m.key.fromMe && !config.allowFromMe) return;
+            if (m.key.fromMe && !config.allowFromMe) continue;
 
             const text =
               m.message.conversation ||
@@ -227,7 +227,7 @@ export class BotClient {
                   m
                 );
               }
-              return;
+              continue;
             }
 
             if (await this.commandHandler.isCommand(text)) {
