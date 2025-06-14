@@ -191,8 +191,9 @@ export class BotClient {
 
       this.sock.ev.on("creds.update", this.authState.saveCreds);
 
-      this.sock.ev.on("messages.upsert", async ({ messages }) => {
+      this.sock.ev.on("messages.upsert", async ({ messages, type }) => {
         try {
+          if (type != "notify") return;
           const m = messages[0];
           if (!m.message) return;
 
