@@ -43,7 +43,7 @@ export class BotClient {
   private usageService: CommandUsageService | null = null;
   private mongoClient: MongoClient | null = null;
   private store = makeInMemoryStore({ logger });
-  private groupCache = new NodeCache({});
+  private groupCache = new NodeCache({ stdTTL: 5 * 60, useClones: false });
 
   constructor() {
     this.sessionService = new SessionService();
@@ -93,8 +93,9 @@ export class BotClient {
           connectTimeoutMs: 60000, // Allow more time for initial connection
           keepAliveIntervalMs: 10000, // More frequent keep-alive pings
           retryRequestDelayMs: 2000, // Retry delay for failed requests
-          shouldIgnoreJid: (jid) => isJidBroadcast(jid),
           browser: Browsers.macOS("Desktop"),
+          markOnlineOnConnect: true,
+          shouldIgnoreJid: (jid) => isJidBroadcast(jid),
           patchMessageBeforeSending: (message, jids) => {
             // The function should only return the modified message, not an array
             // We'll just keep the original message unchanged
@@ -228,6 +229,7 @@ export class BotClient {
           }
 
           if (await this.commandHandler.isCommand(text)) {
+            // await this.sock.
             await this.commandHandler.handleCommand(
               text,
               jid,
@@ -238,6 +240,20 @@ export class BotClient {
           }
         } catch (error) {
           log.error("Error handling message: ", error);
+        }
+      });
+
+      this.sock.ev.on("groups.update", async ([event]) => {
+        if (this.sock && event.id) {
+          const metadata = await this.sock.groupMetadata(event.id);
+          this.groupCache.set(event.id, metadata);
+        }
+      });
+
+      this.sock.ev.on("group-participants.update", async (event) => {
+        if (this.sock && event.id) {
+          const metadata = await this.sock.groupMetadata(event.id);
+          this.groupCache.set(event.id, metadata);
         }
       });
     } catch (error) {
