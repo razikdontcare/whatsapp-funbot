@@ -82,7 +82,8 @@ export class AskAICommand extends CommandInterface {
         quotedText = quoted.imageMessage.caption;
 
       if (quotedText) {
-        prompt = quotedText.trim();
+        prompt =
+          'Additional Context:\n"' + quotedText.trim() + '"\n\n' + prompt;
       }
     }
 
