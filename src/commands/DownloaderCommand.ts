@@ -138,11 +138,6 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
         url = urls[0] || null;
       }
     }
-    // If still no URL, try to extract from the current message text
-    if (!url && msg.message?.extendedTextMessage?.text) {
-      const urls = extractUrlsFromText(msg.message.extendedTextMessage.text);
-      url = urls[0] || null;
-    }
 
     if (!url) {
       await sock.sendMessage(jid, {
