@@ -4,11 +4,12 @@ Bot WhatsApp multifungsi dengan berbagai game dan utilitas, dilengkapi sistem ko
 
 ## ✨ Fitur Utama
 
+- 🤖 **AI Conversation**: Chat multi-turn dengan AI menggunakan Groq, dilengkapi session management per user
 - 🎮 **Game Interaktif**: Hangman, Rock Paper Scissors, dan game lainnya
 - ⚙️ **Konfigurasi Dinamis**: Kelola pengaturan bot via command atau API tanpa restart
 - 👥 **Sistem Role**: Admin, Moderator, dan VIP dengan permission berbeda
 - 📊 **Command Usage Stats**: Tracking penggunaan command
-- 🔄 **Session Management**: Kelola session game dengan MongoDB
+- 🔄 **Session Management**: Kelola session game dan AI conversation dengan MongoDB
 - 🌐 **REST API**: Endpoint untuk monitoring dan management
 - 📝 **Command Usage Tracking**: Analytics penggunaan bot
 
@@ -68,6 +69,9 @@ NODE_ENV=production bun run src/index.ts
 
 ### Core Commands
 
+- `!ai <pertanyaan>` - Chat dengan AI (mendukung percakapan multi-turn)
+- `!ai status` - Lihat status sesi percakapan AI
+- `!ai end` - Akhiri sesi percakapan AI
 - `!games` - Lihat daftar game tersedia
 - `!help [command]` - Bantuan command
 - `!stop` - Hentikan game yang sedang berjalan
