@@ -17,6 +17,7 @@ export interface AIConversationSession {
 }
 
 export class AIConversationService {
+  private static instance: AIConversationService | null = null;
   private sessions: Map<string, AIConversationSession> = new Map();
   private db: Db | null = null;
   private conversationCollection: Collection | null = null;
@@ -25,8 +26,22 @@ export class AIConversationService {
 
   private static readonly SESSION_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 
-  constructor() {
+  private constructor() {
     this.initialize();
+  }
+
+  static getInstance(): AIConversationService {
+    if (!AIConversationService.instance) {
+      AIConversationService.instance = new AIConversationService();
+    }
+    return AIConversationService.instance;
+  }
+
+  static async destroyInstance(): Promise<void> {
+    if (AIConversationService.instance) {
+      AIConversationService.instance.destroy();
+      AIConversationService.instance = null;
+    }
   }
 
   private async initialize(): Promise<void> {

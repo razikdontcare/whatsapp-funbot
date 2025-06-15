@@ -34,7 +34,7 @@ export class AskAICommand extends CommandInterface {
   };
 
   private ai = new Groq({ apiKey: BotConfig.groqApiKey });
-  private conversationService = new AIConversationService();
+  private conversationService = AIConversationService.getInstance();
 
   async handleCommand(
     args: string[],
