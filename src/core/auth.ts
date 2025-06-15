@@ -105,8 +105,6 @@ export const useMongoDBAuthState = async (
       800
     );
 
-    console.debug("Loaded credentials document:", credsDoc);
-
     creds = credsDoc?.data
       ? deserializeData<AuthenticationCreds>(credsDoc.data) || initAuthCreds()
       : initAuthCreds();
