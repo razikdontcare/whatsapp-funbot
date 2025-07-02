@@ -132,7 +132,7 @@ export class YTSearchCommand extends CommandInterface {
       // Simpan hasil ke session agar bisa diakses user untuk download
       await sessionService.setSession(jid, user, "ytsearch", { videos });
 
-      text += `Balas dengan nomor urutan (misal: 1 atau 2 audio) untuk download video/audio.`;
+      text += `Gunakan kembali perintah dengan nomor urutan (misal: 1 atau 2 audio) untuk download video/audio.`;
 
       await sock.sendMessage(jid, { text });
     } catch (error) {
