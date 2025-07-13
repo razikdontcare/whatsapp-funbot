@@ -59,59 +59,59 @@ jobs:
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@master
-        env:
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          VERSION: ${{ steps.get_version.outputs.VERSION }}
-          CR_PAT: ${{ secrets.CR_PAT }}
-          MONGO_URI: ${{ secrets.MONGO_URI }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
-          NODE_ENV: "production"
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT || '22' }}
-          envs: GITHUB_REPOSITORY,VERSION,CR_PAT,MONGO_URI,NODE_ENV,GROQ_API_KEY,YOUTUBE_COOKIES
-          script: |
-            # Login to GitHub Container Registry
-            echo "${CR_PAT}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      # - name: Deploy to VPS
+      #   uses: appleboy/ssh-action@master
+      #   env:
+      #     GITHUB_REPOSITORY: ${{ github.repository }}
+      #     VERSION: ${{ steps.get_version.outputs.VERSION }}
+      #     CR_PAT: ${{ secrets.CR_PAT }}
+      #     MONGO_URI: ${{ secrets.MONGO_URI }}
+      #     GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      #     YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
+      #     NODE_ENV: "production"
+      #   with:
+      #     host: ${{ secrets.VPS_HOST }}
+      #     username: ${{ secrets.VPS_USERNAME }}
+      #     key: ${{ secrets.VPS_SSH_KEY }}
+      #     port: ${{ secrets.VPS_PORT || '22' }}
+      #     envs: GITHUB_REPOSITORY,VERSION,CR_PAT,MONGO_URI,NODE_ENV,GROQ_API_KEY,YOUTUBE_COOKIES
+      #     script: |
+      #       # Login to GitHub Container Registry
+      #       echo "${CR_PAT}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # Define image
-            IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY}:${VERSION}"
-            echo "Using image: ${IMAGE_NAME}"
+      #       # Define image
+      #       IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY}:${VERSION}"
+      #       echo "Using image: ${IMAGE_NAME}"
 
-            # Pull the latest image
-            docker pull "${IMAGE_NAME}"
+      #       # Pull the latest image
+      #       docker pull "${IMAGE_NAME}"
 
-            # Stop and remove the existing container if it exists
-            docker stop whatsapp-funbot 2>/dev/null || true
-            docker rm whatsapp-funbot 2>/dev/null || true
+      #       # Stop and remove the existing container if it exists
+      #       docker stop whatsapp-funbot 2>/dev/null || true
+      #       docker rm whatsapp-funbot 2>/dev/null || true
 
-            # Create .env file (alternative method)
-            echo "Creating environment configuration..."
-            cat > .env << EOF
-            MONGO_URI=${MONGO_URI}
-            NODE_ENV=${NODE_ENV}
-            GROQ_API_KEY=${GROQ_API_KEY}
-            EOF
+      #       # Create .env file (alternative method)
+      #       echo "Creating environment configuration..."
+      #       cat > .env << EOF
+      #       MONGO_URI=${MONGO_URI}
+      #       NODE_ENV=${NODE_ENV}
+      #       GROQ_API_KEY=${GROQ_API_KEY}
+      #       EOF
 
-            # Create cookies.txt file
-            if [ -n "${YOUTUBE_COOKIES}" ]; then
-              echo "${YOUTUBE_COOKIES}" > cookies.txt
-            else
-              echo "No YOUTUBE_COOKIES secret found" > cookies.txt
-            fi
+      #       # Create cookies.txt file
+      #       if [ -n "${YOUTUBE_COOKIES}" ]; then
+      #         echo "${YOUTUBE_COOKIES}" > cookies.txt
+      #       else
+      #         echo "No YOUTUBE_COOKIES secret found" > cookies.txt
+      #       fi
 
-            # Run the new container with appropriate environment variables
-            docker run -d --name whatsapp-funbot \
-              --hostname razikdotnet-wabot \
-              --restart unless-stopped \
-              --env-file .env \
-              -v "$(pwd)/cookies.txt:/app/cookies.txt" \
-              "${IMAGE_NAME}"
+      #       # Run the new container with appropriate environment variables
+      #       docker run -d --name whatsapp-funbot \
+      #         --hostname razikdotnet-wabot \
+      #         --restart unless-stopped \
+      #         --env-file .env \
+      #         -v "$(pwd)/cookies.txt:/app/cookies.txt" \
+      #         "${IMAGE_NAME}"
 
-            # Clean up old images
-            docker image prune -af
+      #       # Clean up old images
+      #       docker image prune -af
