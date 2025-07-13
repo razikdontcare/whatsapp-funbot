@@ -11,7 +11,7 @@ export type UserRole = "admin" | "moderator" | "vip";
 export const BotConfig = {
   // Pengaturan Prefix
   prefix: "!",
-  alternativePrefixes: ["/", "."],
+  alternativePrefixes: ["/"],
   allowMentionPrefix: false, // Aktifkan untuk mengizinkan prefix mention (@bot command)
 
   // Pengaturan Umum
