@@ -45,9 +45,9 @@ function getBotClient(): BotClient | null {
 
 // REST API: Send a WhatsApp message
 app.post("/api/send-message", async (c) => {
-  const { number, text } = await c.req.json();
-  if (!number || !text) {
-    return c.json({ error: "Missing 'number' or 'text' in request body" }, 400);
+  const { text, jid } = await c.req.json();
+  if (!jid || !text) {
+    return c.json({ error: "Missing 'jid' or 'text' in request body" }, 400);
   }
   try {
     const botClient = getBotClient();
@@ -59,7 +59,8 @@ app.post("/api/send-message", async (c) => {
       return c.json({ error: "Bot is not ready or not connected" }, 503);
     }
     const sock = (botClient as any)["sock"];
-    await sock.sendMessage(number + JID_SUFFIX, { text });
+    let targetJid = jid.endsWith(JID_SUFFIX) ? jid : jid + JID_SUFFIX;
+    await sock.sendMessage(targetJid, { text });
     return c.json({ success: true });
   } catch (err) {
     return c.json(
