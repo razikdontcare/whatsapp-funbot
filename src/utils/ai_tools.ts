@@ -15,8 +15,14 @@ export async function web_search(query: string): Promise<string> {
       searchDepth: "advanced",
       includeAnswer: true,
     });
-    if (response.answer) {
-      return response.answer;
+    if (response.answer && response.results && response.results.length > 0) {
+      // url, title, and score
+      const sources = response.results
+        .map((result) => {
+          return `- [${result.title}](${result.url}) (Score: ${result.score})`;
+        })
+        .join("\n");
+      return `${response.answer}\n\nSumber:\n${sources}`;
     } else if (response.results && response.results.length > 0) {
       return response.results.map((result) => result.title).join("\n");
     } else {
