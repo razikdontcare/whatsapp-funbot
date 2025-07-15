@@ -2,7 +2,7 @@ import { proto } from "baileys";
 import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
 import { WebSocketInfo } from "../core/types.js";
 import { SessionService } from "../services/SessionService.js";
-import { BotConfig } from "../core/config.js";
+import { BotConfig, log } from "../core/config.js";
 import { AIConversationService } from "../services/AIConversationService.js";
 import Groq from "groq-sdk";
 import { tavily } from "@tavily/core";
@@ -113,7 +113,7 @@ export class AskAICommand extends CommandInterface {
       );
 
       // Get AI response with conversation context
-      const response = await this.getGroqCompletion(history);
+      const response = await this.getGroqCompletion(history, user);
 
       // Add AI response to conversation history
       await this.conversationService.addMessage(user, "assistant", response);
@@ -207,7 +207,8 @@ export class AskAICommand extends CommandInterface {
   }
 
   async getGroqCompletion(
-    conversationHistory: import("../services/AIConversationService.js").AIMessage[]
+    conversationHistory: import("../services/AIConversationService.js").AIMessage[],
+    user: string
   ): Promise<string> {
     try {
       // Build messages array for Groq API
@@ -265,13 +266,29 @@ export class AskAICommand extends CommandInterface {
       const toolCalls = responseMessage.tool_calls;
 
       if (toolCalls && toolCalls.length > 0) {
+        log.info(
+          `Tool calls detected: ${toolCalls
+            .map((call) => call.function.name)
+            .join(", ")}`
+        );
         const availableFunctions = {
           web_search: this.web_search,
         };
 
         if (responseMessage.content) {
           messages.push(responseMessage);
+          await this.conversationService.addMessage(
+            user,
+            "assistant",
+            responseMessage.content
+          );
         }
+
+        messages.push({
+          role: "assistant",
+          content: null,
+          tool_calls: toolCalls,
+        });
 
         for (const toolCall of toolCalls) {
           const functionName = toolCall.function.name;
@@ -285,6 +302,13 @@ export class AskAICommand extends CommandInterface {
             content: functionResponse,
             tool_call_id: toolCall.id,
           });
+
+          await this.conversationService.addMessage(
+            user,
+            "tool",
+            functionResponse,
+            toolCall.id
+          );
         }
 
         const secondResponse = await this.ai.chat.completions.create({
@@ -316,6 +340,10 @@ export class AskAICommand extends CommandInterface {
 
   async web_search(query: string): Promise<string> {
     try {
+      log.info(`Performing web search for query: ${query}`);
+      if (!query) {
+        return "Tidak ada query yang diberikan untuk pencarian web.";
+      }
       const response = await this.tavilyClient.search(query, {
         searchDepth: "advanced",
         includeAnswer: true,
