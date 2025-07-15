@@ -3,9 +3,10 @@ import { Collection, Db } from "mongodb";
 import { BotConfig, log } from "../core/config.js";
 
 export interface AIMessage {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "tool";
   content: string;
   timestamp: number;
+  tool_call_id?: string; // Optional ID for tool calls
 }
 
 export interface AIConversationSession {
@@ -179,8 +180,9 @@ export class AIConversationService {
 
   async addMessage(
     userId: string,
-    role: "user" | "assistant",
-    content: string
+    role: AIMessage["role"],
+    content: string,
+    tool_call_id?: string
   ): Promise<void> {
     let session = await this.getSession(userId);
     if (!session) {
@@ -192,6 +194,7 @@ export class AIConversationService {
       role,
       content,
       timestamp: now,
+      tool_call_id,
     };
 
     session.messages.push(message);

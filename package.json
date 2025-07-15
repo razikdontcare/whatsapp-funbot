@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.14.1",
+    "@tavily/core": "^0.5.9",
     "axios": "^1.8.4",
     "baileys": "^6.7.16",
     "chalk": "^5.4.1",

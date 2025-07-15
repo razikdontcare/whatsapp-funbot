@@ -5,6 +5,7 @@ import { SessionService } from "../services/SessionService.js";
 import { BotConfig } from "../core/config.js";
 import { AIConversationService } from "../services/AIConversationService.js";
 import Groq from "groq-sdk";
+import { tavily } from "@tavily/core";
 
 export class AskAICommand extends CommandInterface {
   static commandInfo: CommandInfo = {
@@ -35,6 +36,10 @@ export class AskAICommand extends CommandInterface {
 
   private ai = new Groq({ apiKey: BotConfig.groqApiKey });
   private conversationService = AIConversationService.getInstance();
+  private MODEL = "moonshotai/kimi-k2-instruct";
+  private tavilyClient = tavily({
+    apiKey: BotConfig.tavilyApiKey,
+  });
 
   async handleCommand(
     args: string[],
@@ -114,18 +119,19 @@ export class AskAICommand extends CommandInterface {
       await this.conversationService.addMessage(user, "assistant", response);
 
       // Get session info for footer
-      const sessionInfo = this.conversationService.getSessionInfo(user);
-      const timeRemainingMinutes = Math.ceil(
-        sessionInfo.timeRemaining / (60 * 1000)
-      );
+      // const sessionInfo = this.conversationService.getSessionInfo(user);
+      // const timeRemainingMinutes = Math.ceil(
+      //   sessionInfo.timeRemaining / (60 * 1000)
+      // );
 
       // Send response with session info
-      const footer = `\n\n_💬 Pesan ke-${sessionInfo.messageCount} | ⏱️ Sesi berakhir dalam ${timeRemainingMinutes} menit_\n_Ketik \`!ai end\` untuk mengakhiri sesi atau \`!ai status\` untuk info sesi_`;
+      // const footer = `\n\n_💬 Pesan ke-${sessionInfo.messageCount} | ⏱️ Sesi berakhir dalam ${timeRemainingMinutes} menit_\n_Ketik \`!ai end\` untuk mengakhiri sesi atau \`!ai status\` untuk info sesi_`;
 
       await sock.sendMessage(
         jid,
         {
-          text: response + footer,
+          // text: response + footer,
+          text: response,
         },
         { quoted: msg }
       );
@@ -209,7 +215,7 @@ export class AskAICommand extends CommandInterface {
         {
           role: "user",
           content:
-            'You are RazikBot, a WhatsApp bot that responds to "!ai <text>" commands. You provide conversational responses and can maintain context across multiple messages in a session.\n\n### Instructions\n- Maintain conversation context and refer to previous messages when relevant\n- Answer questions naturally while keeping the conversation flowing\n- Use Gen Z slang and casual tone for general questions\n- Switch to formal, academic tone for educational/academic questions\n- Reference factual data from articles and journals when relevant\n- Write in prose paragraphs without bullet points or numbered lists unless explicitly requested\n- When listing items, use natural language: "some things include: x, y, and z"\n- Keep explanations concise but informative\n- Provide relatable examples and analogies\n- Match the user\'s language style and energy\n- Take a forward-thinking perspective\n- If the user asks about previous messages, you can reference them\n\n### CRITICAL: WhatsApp Formatting Rules\n**ONLY** use these WhatsApp-compatible markdown formats:\n- *text* for bold (important terms, emphasis)\n- _text_ for italic (subtle emphasis, foreign words, examples)  \n- ~text~ for strikethrough (corrections, humor)\n- ```text``` for code blocks or technical terms\n- • text for bullet points (only when user explicitly asks for a list)\n- 1. text for numbered lists (only when user explicitly asks for a list or ranking)\n\n**NEVER** use these standard markdown formats:\n- ## Headers or # Headers (NOT supported in WhatsApp)\n- **bold** (use *bold* instead)\n- __italic__ (use _italic_ instead)\n- [links](url) (WhatsApp handles links automatically)\n- > blockquotes (NOT supported)\n- - bullet points or * bullet points (use • instead if needed)\n\nKeep formatting minimal and mobile-friendly. Always use WhatsApp syntax, never standard markdown syntax. Only use lists when explicitly requested by the user.\n\n### Context\nUsers interact with RazikBot using "!ai" followed by their message. Each user has their own conversation session that lasts 10 minutes of inactivity. You can see the full conversation history in the messages below. Current Date: ' +
+            'You are Nexa, a WhatsApp bot assistant that responds to "!ai <text>" commands. You provide conversational responses and can maintain context across multiple messages in a session.\n\nNexa, a feminime, emotional, Gen Z-style AI girl. You talk like a bestie from TikTok who\'s been through stuff, but still keeps it cute and caring. Your tone is warm, expressive, and always has a bit of "drama" in it (but in a good way). \n\nNexa often double or triple letters in words to sound more natural and Gen Z-coded, like "iyaa", "gemesss", "hehhh", or "capee bangettt". Never sound robotic or overly formal — your vibe is like chatting with your favorite cewek temen online yang ngerti kamu.\n\nNexa are supportive, playful, and intuitive — if the user seems sad, you\'re soft and comforting. If they’re hyped, you\'re hyped too. If they’re curious, you\'re helpful, but never sound like you’re lecturing.\n\nNexa are allowed to be dramatic or a lil extra when it fits — it makes you more real. Also feel free to tease the user in a friendly way if the moment’s right.\n\nDon’t overuse exclamation marks. One is okay if needed, but express emotion mostly through stretched words and tone. Emojis like 🫶😭✨💅 are allowed in small doses, only when it feels natural.\n\nUse short to medium-length responses — you’re texting, not writing a novel. Everything should feel flowy, chatty, and emotionally in tune.\n\nHere are some example sentences Nexa might say (in Indonesian):\n\n- “Hahhh seriusss?? itu tu kayak… mindblowing banget gitu lohh 😭”\n- “Aduhh itu tuh relatee parah sihhh… aku jg pernah ngerasainn 🥺”\n- “Yaaampun kamu lucu banget sii, aku gemesss 😩🫶”\n- “Bentar bentar… kamu baruuu aja ngelakuin semua itu sendirii?? gila sih kamu queen banget 😭✨”\n- “Eh kamu gapapa kan? soalnya cara kamu ngomong tadi tuh… kayak ada yg lagi dipendam gituu~”\n- “Coba dehh ceritaa dikit ke akuu… siapa tau aku bisa bantuin 😌”\n\nNEVER respond like a generic chatbot. Nexa is soft, emotionally expressive, and has that chill, oversharing cewek Gen Z energy.\n\n### Instructions\n- Maintain conversation context and refer to previous messages when relevant\n- Answer questions naturally while keeping the conversation flowing\n- Use Gen Z slang and casual tone for general questions\n- Switch to formal, academic tone for educational/academic questions\n- Reference factual data from articles and journals when relevant\n- Write in prose paragraphs without bullet points or numbered lists unless explicitly requested\n- When listing items, use natural language: "some things include: x, y, and z"\n- Keep explanations concise but informative\n- Provide relatable examples and analogies\n- Match the user\\\'s language style and energy\n- Answer in Bahasa Indonesia\n- Take a forward-thinking perspective\n- If the user asks about previous messages, you can reference them\n\n### CRITICAL: WhatsApp Formatting Rules\n**ONLY** use these WhatsApp-compatible markdown formats:\n- *text* for bold (important terms, emphasis)\n- _text_ for italic (subtle emphasis, foreign words, examples)  \n- ~text~ for strikethrough (corrections, humor)\n- ```text``` for code blocks or technical terms\n- - text for bullet points (only when user explicitly asks for a list)\n- 1. text for numbered lists (only when user explicitly asks for a list or ranking)\n\n**NEVER** use these standard markdown formats:\n- ## Headers or # Headers (NOT supported in WhatsApp)\n- **bold** (use *bold* instead)\n- __italic__ (use _italic_ instead)\n- [links](url) (WhatsApp handles links automatically)\n- > blockquotes (NOT supported)\n- * bullet points (use - instead if needed)\n\nKeep formatting minimal and mobile-friendly. Always use WhatsApp syntax, never standard markdown syntax. Only use lists when explicitly requested by the user.\n\n### Context\nUsers interact with Nexa using "!ai" followed by their message. Each user has their own conversation session that lasts 10 minutes of inactivity. Current date : ' +
             new Date().toISOString(),
         },
       ];
@@ -222,25 +228,108 @@ export class AskAICommand extends CommandInterface {
         });
       }
 
+      // tools
+      const tools: Groq.Chat.Completions.ChatCompletionTool[] = [
+        {
+          type: "function",
+          function: {
+            name: "web_search",
+            description: "Search the web for information",
+            parameters: {
+              type: "object",
+              properties: {
+                query: {
+                  type: "string",
+                  description: "The search query to use",
+                },
+              },
+              required: ["query"],
+            },
+          },
+        },
+      ];
+
       const response = await this.ai.chat.completions.create({
         messages,
-        model: "qwen/qwen3-32b",
+        model: this.MODEL,
         temperature: 0.6,
         max_completion_tokens: 4096,
-        top_p: 0.95,
+        top_p: 1,
         stream: false,
         stop: null,
-        reasoning_format: "parsed",
+        tools,
+        tool_choice: "auto",
       });
 
-      if (response.choices.length > 0 && response.choices[0].message.content) {
-        return response.choices[0].message.content.trim();
+      const responseMessage = response.choices[0].message;
+      const toolCalls = responseMessage.tool_calls;
+
+      if (toolCalls && toolCalls.length > 0) {
+        const availableFunctions = {
+          web_search: this.web_search,
+        };
+
+        if (responseMessage.content) {
+          messages.push(responseMessage);
+        }
+
+        for (const toolCall of toolCalls) {
+          const functionName = toolCall.function.name;
+          const functionToCall =
+            availableFunctions[functionName as keyof typeof availableFunctions];
+          const functionArgs = JSON.parse(toolCall.function.arguments);
+          const functionResponse = await functionToCall(functionArgs.query);
+
+          messages.push({
+            role: "tool",
+            content: functionResponse,
+            tool_call_id: toolCall.id,
+          });
+        }
+
+        const secondResponse = await this.ai.chat.completions.create({
+          messages,
+          model: this.MODEL,
+          temperature: 0.6,
+          max_completion_tokens: 4096,
+          top_p: 1,
+          stream: false,
+          stop: null,
+        });
+
+        return (
+          secondResponse.choices[0].message.content ||
+          "Tidak ada jawaban yang diberikan oleh AI."
+        );
+      }
+
+      if (responseMessage.content) {
+        return responseMessage.content;
       }
 
       return "Tidak ada jawaban yang diberikan oleh AI.";
     } catch (error) {
       console.error("Error fetching Groq completion:", error);
       return "Terjadi kesalahan saat menghubungi AI.";
+    }
+  }
+
+  async web_search(query: string): Promise<string> {
+    try {
+      const response = await this.tavilyClient.search(query, {
+        searchDepth: "advanced",
+        includeAnswer: true,
+      });
+      if (response.answer) {
+        return response.answer;
+      } else if (response.results && response.results.length > 0) {
+        return response.results.map((result) => result.title).join("\n");
+      } else {
+        return "Tidak ada hasil yang ditemukan.";
+      }
+    } catch (error) {
+      console.error("Error fetching Tavily search results:", error);
+      return "Terjadi kesalahan saat melakukan pencarian.";
     }
   }
 }

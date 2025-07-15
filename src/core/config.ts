@@ -40,6 +40,7 @@ export const BotConfig = {
 
   // Pengaturan API (tetap di environment variables untuk keamanan)
   groqApiKey: process.env.GROQ_API_KEY || "", // Kunci API untuk Groq AI
+  tavilyApiKey: process.env.TAVILY_API_KEY || "", // Kunci API untuk Tavily AI
 
   // Pesan respons
   messages: {
