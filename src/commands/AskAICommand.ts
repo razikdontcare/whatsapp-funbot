@@ -5,7 +5,7 @@ import { SessionService } from "../services/SessionService.js";
 import { BotConfig, log } from "../core/config.js";
 import { AIConversationService } from "../services/AIConversationService.js";
 import Groq from "groq-sdk";
-import { tavily } from "@tavily/core";
+import { web_search } from "../utils/ai_tools.js";
 
 export class AskAICommand extends CommandInterface {
   static commandInfo: CommandInfo = {
@@ -37,9 +37,6 @@ export class AskAICommand extends CommandInterface {
   private ai = new Groq({ apiKey: BotConfig.groqApiKey });
   private conversationService = AIConversationService.getInstance();
   private MODEL = "moonshotai/kimi-k2-instruct";
-  private tavilyClient = tavily({
-    apiKey: BotConfig.tavilyApiKey,
-  });
 
   async handleCommand(
     args: string[],
@@ -272,7 +269,7 @@ export class AskAICommand extends CommandInterface {
             .join(", ")}`
         );
         const availableFunctions = {
-          web_search: this.web_search,
+          web_search: web_search,
         };
 
         if (responseMessage.content) {
@@ -335,29 +332,6 @@ export class AskAICommand extends CommandInterface {
     } catch (error) {
       console.error("Error fetching Groq completion:", error);
       return "Terjadi kesalahan saat menghubungi AI.";
-    }
-  }
-
-  async web_search(query: string): Promise<string> {
-    try {
-      log.info(`Performing web search for query: ${query}`);
-      if (!query) {
-        return "Tidak ada query yang diberikan untuk pencarian web.";
-      }
-      const response = await this.tavilyClient.search(query, {
-        searchDepth: "advanced",
-        includeAnswer: true,
-      });
-      if (response.answer) {
-        return response.answer;
-      } else if (response.results && response.results.length > 0) {
-        return response.results.map((result) => result.title).join("\n");
-      } else {
-        return "Tidak ada hasil yang ditemukan.";
-      }
-    } catch (error) {
-      console.error("Error fetching Tavily search results:", error);
-      return "Terjadi kesalahan saat melakukan pencarian.";
     }
   }
 }
