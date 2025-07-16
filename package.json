@@ -16,6 +16,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@gradio/client": "^1.15.5",
     "@hono/node-server": "^1.14.1",
     "@tavily/core": "^0.5.9",
     "axios": "^1.8.4",
