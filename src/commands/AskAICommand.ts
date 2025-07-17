@@ -346,8 +346,15 @@ export class AskAICommand extends CommandInterface {
           web_search: web_search,
         };
 
+        // Add the assistant message with tool calls (not content)
+        messages.push({
+          role: "assistant",
+          content: responseMessage.content,
+          tool_calls: toolCalls,
+        });
+
+        // Add assistant message to conversation history if it has content
         if (responseMessage.content) {
-          messages.push(responseMessage);
           await this.conversationService.addMessage(
             user,
             "assistant",
@@ -355,31 +362,69 @@ export class AskAICommand extends CommandInterface {
           );
         }
 
-        messages.push({
-          role: "assistant",
-          content: null,
-          tool_calls: toolCalls,
-        });
-
         for (const toolCall of toolCalls) {
-          const functionName = toolCall.function.name;
-          const functionToCall =
-            availableFunctions[functionName as keyof typeof availableFunctions];
-          const functionArgs = JSON.parse(toolCall.function.arguments);
-          const functionResponse = await functionToCall(functionArgs.query);
+          try {
+            const functionName = toolCall.function.name;
+            const functionToCall =
+              availableFunctions[
+                functionName as keyof typeof availableFunctions
+              ];
 
-          messages.push({
-            role: "tool",
-            content: functionResponse,
-            tool_call_id: toolCall.id,
-          });
+            if (!functionToCall) {
+              throw new Error(`Function ${functionName} not found`);
+            }
 
-          await this.conversationService.addMessage(
-            user,
-            "tool",
-            functionResponse,
-            toolCall.id
-          );
+            // Validate and parse tool arguments
+            let functionArgs;
+            try {
+              functionArgs = JSON.parse(toolCall.function.arguments);
+            } catch (parseError) {
+              throw new Error(`Invalid JSON in tool arguments: ${parseError}`);
+            }
+
+            // Validate required parameters
+            if (!functionArgs.query) {
+              throw new Error("Missing required parameter: query");
+            }
+
+            const functionResponse = await functionToCall(functionArgs.query);
+
+            messages.push({
+              role: "tool",
+              content: functionResponse,
+              tool_call_id: toolCall.id,
+            });
+
+            await this.conversationService.addMessage(
+              user,
+              "tool",
+              functionResponse,
+              toolCall.id
+            );
+          } catch (toolError) {
+            console.error(
+              `Error executing tool ${toolCall.function.name}:`,
+              toolError
+            );
+
+            // Add error message to tool response
+            const errorMessage = `Error executing ${toolCall.function.name}: ${
+              toolError instanceof Error ? toolError.message : "Unknown error"
+            }`;
+
+            messages.push({
+              role: "tool",
+              content: errorMessage,
+              tool_call_id: toolCall.id,
+            });
+
+            await this.conversationService.addMessage(
+              user,
+              "tool",
+              errorMessage,
+              toolCall.id
+            );
+          }
         }
 
         const secondResponse = await this.ai.chat.completions.create({
