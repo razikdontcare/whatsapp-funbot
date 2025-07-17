@@ -6,7 +6,12 @@ import { BotConfig, log } from "../core/config.js";
 import { AIConversationService } from "../services/AIConversationService.js";
 import { AIResponseService } from "../services/AIResponseService.js";
 import Groq from "groq-sdk";
-import { web_search, get_bot_commands, get_command_help, execute_bot_command } from "../utils/ai_tools.js";
+import {
+  web_search,
+  get_bot_commands,
+  get_command_help,
+  execute_bot_command,
+} from "../utils/ai_tools.js";
 
 export class AskAICommand extends CommandInterface {
   static commandInfo: CommandInfo = {
@@ -282,7 +287,8 @@ export class AskAICommand extends CommandInterface {
       }
 
       // Add bot command access information
-      base_prompt += "\n\n### Bot Command Access\nYou have access to various bot commands through these tools:\n- `get_bot_commands(query?)` - Get list of available bot commands (optionally filtered)\n- `get_command_help(commandName)` - Get detailed help for a specific command\n- `execute_bot_command(commandName, args)` - Execute a bot command safely\n\n**Command Usage Guidelines:**\n- Use `get_bot_commands()` when users ask about available features or \"what can this bot do?\"\n- Use `get_command_help()` when users need help with a specific command\n- Use `execute_bot_command()` when users want to perform actions like downloading, searching, or playing games\n- Always explain what you're doing when executing commands\n- Be helpful and proactive in suggesting relevant commands\n\n**Safety Notes:**\n- Some commands may not be available in all contexts\n- Command execution respects user permissions and cooldowns\n- Game commands won't work if another game is already running\n- Admin commands are restricted\n\n";
+      base_prompt +=
+        "\n\n### Bot Command Access\nYou have access to various bot commands through these tools:\n- `get_bot_commands(query?)` - Get list of available bot commands (optionally filtered)\n- `get_command_help(commandName)` - Get detailed help for a specific command\n- `execute_bot_command(commandName, args)` - Execute a bot command safely\n\n**Command Usage Guidelines:**\n- Use `get_bot_commands()` when users ask about available features or \"what can this bot do?\"\n- Use `get_command_help()` when users need help with a specific command\n- Use `execute_bot_command()` when users want to perform actions like downloading, searching, or playing games\n- Always explain what you're doing when executing commands\n- Be helpful and proactive in suggesting relevant commands\n\n**Safety Notes:**\n- Some commands may not be available in all contexts\n- Command execution respects user permissions and cooldowns\n- Game commands won't work if another game is already running\n- Admin commands are restricted\n\n";
 
       base_prompt += "Current Date : " + new Date().toISOString() + "\n\n";
       // Build messages array for Groq API
@@ -302,10 +308,17 @@ export class AskAICommand extends CommandInterface {
 
       // Add conversation history
       for (const message of conversationHistory) {
-        messages.push({
+        const messageObj: any = {
           role: message.role,
           content: message.content,
-        });
+        };
+
+        // Add tool_call_id for tool messages
+        if (message.role === "tool" && message.tool_call_id) {
+          messageObj.tool_call_id = message.tool_call_id;
+        }
+
+        messages.push(messageObj);
       }
 
       // tools
@@ -331,13 +344,15 @@ export class AskAICommand extends CommandInterface {
           type: "function",
           function: {
             name: "get_bot_commands",
-            description: "Get a list of available bot commands, optionally filtered by query",
+            description:
+              "Get a list of available bot commands, optionally filtered by query",
             parameters: {
               type: "object",
               properties: {
                 query: {
                   type: "string",
-                  description: "Optional filter query to search for specific commands",
+                  description:
+                    "Optional filter query to search for specific commands",
                 },
               },
               required: [],
@@ -348,7 +363,8 @@ export class AskAICommand extends CommandInterface {
           type: "function",
           function: {
             name: "get_command_help",
-            description: "Get detailed help information for a specific bot command",
+            description:
+              "Get detailed help information for a specific bot command",
             parameters: {
               type: "object",
               properties: {
@@ -365,7 +381,8 @@ export class AskAICommand extends CommandInterface {
           type: "function",
           function: {
             name: "execute_bot_command",
-            description: "Execute a bot command with given arguments. Use this when the user wants to perform an action that requires running a bot command.",
+            description:
+              "Execute a bot command with given arguments. Use this when the user wants to perform an action that requires running a bot command.",
             parameters: {
               type: "object",
               properties: {
@@ -376,7 +393,7 @@ export class AskAICommand extends CommandInterface {
                 args: {
                   type: "array",
                   items: {
-                    type: "string"
+                    type: "string",
                   },
                   description: "Arguments to pass to the command",
                 },
@@ -413,10 +430,16 @@ export class AskAICommand extends CommandInterface {
           web_search: web_search,
           get_bot_commands: get_bot_commands,
           get_command_help: get_command_help,
-          execute_bot_command: jid && sock && msg 
-            ? (commandName: string, args: string[]) => 
-                execute_bot_command(commandName, args, { jid, user, sock, msg })
-            : undefined,
+          execute_bot_command:
+            jid && sock && msg
+              ? (commandName: string, args: string[]) =>
+                  execute_bot_command(commandName, args, {
+                    jid,
+                    user,
+                    sock,
+                    msg,
+                  })
+              : undefined,
         };
 
         // Add the assistant message with tool calls (not content)
@@ -457,27 +480,42 @@ export class AskAICommand extends CommandInterface {
 
             // Execute function based on its type
             let functionResponse: string;
-            
+
             if (functionName === "web_search") {
               if (!functionArgs.query) {
                 throw new Error("Missing required parameter: query");
               }
-              functionResponse = await (functionToCall as typeof web_search)(functionArgs.query);
+              functionResponse = await (functionToCall as typeof web_search)(
+                functionArgs.query
+              );
             } else if (functionName === "get_bot_commands") {
-              functionResponse = await (functionToCall as typeof get_bot_commands)(functionArgs.query);
+              functionResponse = await (
+                functionToCall as typeof get_bot_commands
+              )(functionArgs.query);
             } else if (functionName === "get_command_help") {
               if (!functionArgs.commandName) {
                 throw new Error("Missing required parameter: commandName");
               }
-              functionResponse = await (functionToCall as typeof get_command_help)(functionArgs.commandName);
+              functionResponse = await (
+                functionToCall as typeof get_command_help
+              )(functionArgs.commandName);
             } else if (functionName === "execute_bot_command") {
               if (!functionArgs.commandName || !functionArgs.args) {
-                throw new Error("Missing required parameters: commandName and args");
+                throw new Error(
+                  "Missing required parameters: commandName and args"
+                );
               }
               if (!functionToCall) {
-                throw new Error("Command execution not available in this context");
+                throw new Error(
+                  "Command execution not available in this context"
+                );
               }
-              functionResponse = await (functionToCall as (cmd: string, args: string[]) => Promise<string>)(functionArgs.commandName, functionArgs.args);
+              functionResponse = await (
+                functionToCall as (
+                  cmd: string,
+                  args: string[]
+                ) => Promise<string>
+              )(functionArgs.commandName, functionArgs.args);
             } else {
               throw new Error(`Unknown function: ${functionName}`);
             }
