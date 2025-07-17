@@ -19,6 +19,7 @@ import { useMongoDBAuthState } from "./auth.js";
 import MAIN_LOGGER from "baileys/lib/Utils/logger.js";
 import { closeMongoClient, getMongoClient } from "./mongo.js";
 import NodeCache from "node-cache";
+import { setCommandHandler } from "../utils/ai_tools.js";
 
 const logger = MAIN_LOGGER.default.child({});
 logger.level = "silent";
@@ -48,6 +49,19 @@ export class BotClient {
   constructor() {
     this.sessionService = new SessionService();
     this.commandHandler = new CommandHandler(this.sessionService);
+
+    // Set the command handler instance for AI tools
+    setCommandHandler(this.commandHandler);
+
+    // Wait for command handler initialization
+    this.commandHandler
+      .waitForInitialization()
+      .then(() => {
+        log.info("CommandHandler initialized successfully");
+      })
+      .catch((error) => {
+        log.error("Failed to initialize CommandHandler:", error);
+      });
   }
 
   async start() {
