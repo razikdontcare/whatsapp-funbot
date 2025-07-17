@@ -7,6 +7,7 @@ import { BotClient } from "./core/BotClient.js";
 import { getBotConfigService } from "./core/config.js";
 
 const app = new Hono();
+const JID_SUFFIX = "@s.whatsapp.net";
 
 // REST API: Get all command usage stats
 app.get("/api/command-usage", async (c) => {
@@ -44,7 +45,7 @@ function getBotClient(): BotClient | null {
 
 // REST API: Send a WhatsApp message
 app.post("/api/send-message", async (c) => {
-  const { jid, text } = await c.req.json();
+  const { text, jid } = await c.req.json();
   if (!jid || !text) {
     return c.json({ error: "Missing 'jid' or 'text' in request body" }, 400);
   }
@@ -58,7 +59,8 @@ app.post("/api/send-message", async (c) => {
       return c.json({ error: "Bot is not ready or not connected" }, 503);
     }
     const sock = (botClient as any)["sock"];
-    await sock.sendMessage(jid, { text });
+    let targetJid = jid.endsWith(JID_SUFFIX) ? jid : jid + JID_SUFFIX;
+    await sock.sendMessage(targetJid, { text });
     return c.json({ success: true });
   } catch (err) {
     return c.json(
@@ -184,10 +186,9 @@ app.post("/api/config/roles/:action", async (c) => {
 
 serve({
   fetch: app.fetch,
-  port: process.env.DASHBOARD_PORT ? Number(process.env.DASHBOARD_PORT) : 3000,
+  port: process.env.DASHBOARD_PORT
+    ? parseInt(process.env.DASHBOARD_PORT, 10)
+    : 5000,
 });
 
-console.log(
-  "Dashboard running on http://localhost:" +
-    (process.env.DASHBOARD_PORT || 3000)
-);
+console.log("API running on port " + (process.env.DASHBOARD_PORT || 5000));

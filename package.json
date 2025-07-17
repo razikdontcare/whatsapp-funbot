@@ -9,13 +9,16 @@
     "@types/bun": "latest",
     "@types/chalk": "^2.2.4",
     "@types/node-cron": "^3.0.11",
+    "@types/yt-search": "^2.10.3",
     "nodemon": "^3.1.9"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@gradio/client": "^1.15.5",
     "@hono/node-server": "^1.14.1",
+    "@tavily/core": "^0.5.9",
     "axios": "^1.8.4",
     "baileys": "^6.7.16",
     "chalk": "^5.4.1",
@@ -29,6 +32,7 @@
     "node-cache": "^5.1.2",
     "node-cron": "^3.0.3",
     "qrcode-terminal": "^0.12.0",
-    "sharp": "^0.34.1"
+    "sharp": "^0.34.1",
+    "yt-search": "^2.13.1"
   }
 }
