@@ -18,31 +18,77 @@ export class CommandHandler {
   private commands: Map<string, CommandInfo> = new Map();
   private aliases: Map<string, string> = new Map();
   private cooldownManager: CooldownManager = new CooldownManager();
+  private initialized: boolean = false;
+  private initializationPromise: Promise<void>;
 
   constructor(
     private sessionService: SessionService,
     private usageService?: CommandUsageService
   ) {
-    // this.registerCommands();
-    (async () => {
-      await this.registerCommands();
-    })();
+    this.initializationPromise = this.initialize();
     setInterval(() => this.sessionService.cleanupExpiredSessions(), 1800000); // 30 minutes
+  }
+
+  private async initialize(): Promise<void> {
+    await this.registerCommands();
+    this.initialized = true;
+  }
+
+  async waitForInitialization(): Promise<void> {
+    await this.initializationPromise;
+  }
+
+  isInitialized(): boolean {
+    return this.initialized;
   }
 
   async registerCommands() {
     const commandsDir = path.resolve(__dirname, "../commands");
-    const files = fs.readdirSync(commandsDir).filter((f) => f.endsWith(".js"));
-    // .filter((f) => f.endsWith(".ts") || f.endsWith(".js"));
-    for (const file of files) {
-      const commandModule = await import(path.join(commandsDir, file));
-      // Support both default and named exports
-      const CommandClass =
-        commandModule.default || Object.values(commandModule)[0];
-      if (!CommandClass || !CommandClass.commandInfo) continue;
-      this.registerCommand(CommandClass.commandInfo);
-      // log.debug(`Registered command: ${CommandClass.commandInfo.name}`);
+
+    // Check if we're in development (TypeScript) or production (JavaScript)
+    const isDev = process.env.NODE_ENV !== "production";
+    const fileExtension = isDev ? ".ts" : ".js";
+
+    let files: string[] = [];
+    try {
+      files = fs
+        .readdirSync(commandsDir)
+        .filter((f) => f.endsWith(fileExtension));
+    } catch (error) {
+      // If no files found with one extension, try the other
+      const altExtension = isDev ? ".js" : ".ts";
+      try {
+        files = fs
+          .readdirSync(commandsDir)
+          .filter((f) => f.endsWith(altExtension));
+      } catch (altError) {
+        log.error(`No command files found in ${commandsDir}`);
+        return;
+      }
     }
+
+    log.info(`Loading ${files.length} command files from ${commandsDir}`);
+
+    for (const file of files) {
+      try {
+        const commandModule = await import(path.join(commandsDir, file));
+        // Support both default and named exports
+        const CommandClass =
+          commandModule.default || Object.values(commandModule)[0];
+        if (!CommandClass || !CommandClass.commandInfo) {
+          log.warn(
+            `Command file ${file} does not export a valid command class`
+          );
+          continue;
+        }
+        this.registerCommand(CommandClass.commandInfo);
+        log.debug(`Registered command: ${CommandClass.commandInfo.name}`);
+      } catch (error) {
+        log.error(`Failed to load command from ${file}:`, error);
+      }
+    }
+
+    log.info(`Successfully registered ${this.commands.size} commands`);
   }
 
   private registerCommand(info: CommandInfo): void {
@@ -589,5 +635,146 @@ export class CommandHandler {
       }
     }
     await sock.sendMessage(jid, { text: statsText });
+  }
+
+  // Methods for AI command access
+  getAllCommands(): CommandInfo[] {
+    return Array.from(this.commands.values());
+  }
+
+  getCommandsByCategory(category: CommandInfo["category"]): CommandInfo[] {
+    return Array.from(this.commands.values()).filter(
+      (cmd) => cmd.category === category
+    );
+  }
+
+  getCommandByName(name: string): CommandInfo | undefined {
+    return this.getCommandInfo(name);
+  }
+
+  isCommandAvailable(name: string): boolean {
+    const info = this.getCommandInfo(name);
+    return info !== undefined && !info.disabled;
+  }
+
+  async canUserExecuteCommand(name: string, user: string): Promise<boolean> {
+    const info = this.getCommandInfo(name);
+    if (!info || info.disabled) return false;
+
+    // Check permissions
+    if (info.requiredRoles && info.requiredRoles.length > 0) {
+      const userRoles = await getUserRoles(user);
+      const hasRole = info.requiredRoles.some((role) =>
+        userRoles.includes(role)
+      );
+      if (!hasRole) return false;
+    }
+
+    return true;
+  }
+
+  async executeCommandForAI(
+    commandName: string,
+    args: string[],
+    jid: string,
+    user: string,
+    sock: WebSocketInfo,
+    msg: proto.IWebMessageInfo
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
+    try {
+      const info = this.getCommandInfo(commandName);
+      if (!info) {
+        return { success: false, error: `Command '${commandName}' not found` };
+      }
+
+      if (info.disabled) {
+        return {
+          success: false,
+          error: `Command '${commandName}' is disabled`,
+        };
+      }
+
+      // Check permissions
+      if (!(await this.canUserExecuteCommand(commandName, user))) {
+        return {
+          success: false,
+          error: `You don't have permission to use '${commandName}'`,
+        };
+      }
+
+      // Check cooldown
+      if (info.cooldown) {
+        const cooldownTime = info.cooldown;
+        const maxUses = info.maxUses || 1;
+
+        if (
+          this.cooldownManager.isOnCooldown(
+            user,
+            commandName,
+            cooldownTime,
+            maxUses
+          )
+        ) {
+          const remainingTime = this.cooldownManager.getRemainingCooldown(
+            user,
+            commandName,
+            cooldownTime
+          );
+          return {
+            success: false,
+            error: `Command on cooldown. Try again in ${remainingTime} seconds`,
+          };
+        }
+      }
+
+      // Safety check for restricted commands
+      const restrictedCommands = ["config", "register"];
+      if (restrictedCommands.includes(commandName.toLowerCase())) {
+        return {
+          success: false,
+          error: `Command '${commandName}' cannot be executed by AI for security reasons`,
+        };
+      }
+
+      // Safety check for game commands
+      if (info.category === "game") {
+        const existingSession = await this.sessionService.getSession(jid, user);
+        if (existingSession) {
+          return {
+            success: false,
+            error: `Cannot start ${commandName} - another game (${existingSession.game}) is already running`,
+          };
+        }
+      }
+
+      // Increment usage stats
+      if (this.usageService) {
+        await this.usageService.increment(info.name, user);
+      }
+
+      // Execute the command
+      const commandInstance = this.getCommandInstance(commandName);
+      await commandInstance.handleCommand(
+        args,
+        jid,
+        user,
+        sock,
+        this.sessionService,
+        msg
+      );
+
+      return {
+        success: true,
+        message: `Command '${commandName}' executed successfully`,
+      };
+    } catch (error) {
+      log.error(`Error executing command '${commandName}' for AI:`, error);
+      return {
+        success: false,
+        error: `Failed to execute command: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      };
+    }
   }
 }
