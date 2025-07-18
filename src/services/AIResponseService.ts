@@ -20,7 +20,7 @@ export class AIResponseService {
   private initialized: boolean = false;
   private cleanupInterval: NodeJS.Timeout | null = null;
 
-  private static readonly RESPONSE_RETENTION_TIME = 24 * 60 * 60 * 1000; // 24 hours
+  private static readonly RESPONSE_RETENTION_TIME = 10 * 60 * 1000; // 10 minutes
 
   private constructor() {
     this.initialize();
