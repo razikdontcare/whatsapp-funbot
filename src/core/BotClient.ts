@@ -7,7 +7,7 @@ import wa, {
   isJidBroadcast,
   fetchLatestBaileysVersion,
 } from "baileys";
-const { proto, Browsers, makeInMemoryStore } = wa;
+const { proto, Browsers } = wa;
 import { CommandHandler } from "./CommandHandler.js";
 import { SessionService } from "../services/SessionService.js";
 import { BotConfig, getCurrentConfig } from "./config.js";
@@ -42,11 +42,19 @@ export class BotClient {
   } | null = null;
   private usageService: CommandUsageService | null = null;
   private mongoClient: MongoClient | null = null;
-  private store = makeInMemoryStore({ logger });
+  private store: any; // Will be initialized in constructor
   private groupCache = new NodeCache({ stdTTL: 5 * 60, useClones: false });
 
   constructor() {
     this.sessionService = new SessionService();
+    // Initialize store here to avoid import issues
+    try {
+      const { makeInMemoryStore } = require("baileys");
+      this.store = makeInMemoryStore({ logger });
+    } catch (err) {
+      log.warn("Could not initialize memory store:", err);
+      this.store = null;
+    }
     this.commandHandler = new CommandHandler(this.sessionService);
 
     // Set the command handler instance for AI tools

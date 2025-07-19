@@ -129,19 +129,28 @@ GET http://localhost:3000/api/leaderboard?game=hangman
 
 ## 🏗️ Architecture
 
+The codebase has been restructured for better maintainability and readability:
+
 ```
 src/
-├── commands/          # Command implementations
+├── api/              # REST API layer (controllers, routes, middleware)
+├── commands/         # Bot commands organized by category
+│   ├── admin/        # Administrative commands
+│   ├── games/        # Game implementations
+│   ├── media/        # Media-related commands
+│   ├── social/       # Social platform integrations
+│   └── utility/      # General utility commands
 ├── core/             # Core bot functionality
-│   ├── config.ts     # Dynamic configuration system
-│   ├── BotClient.ts  # Main bot client
-│   └── CommandHandler.ts
 ├── services/         # Business logic services
-│   ├── BotConfigService.ts    # Configuration management
-│   ├── SessionService.ts      # Session management
-│   └── GameLeaderboardService.ts
-└── utils/            # Utility functions
+└── utils/            # Utility functions organized by domain
+    ├── ai/           # AI-related utilities
+    ├── common/       # Common utilities
+    ├── media/        # Media processing
+    ├── social/       # Social platform utilities
+    └── text/         # Text processing
 ```
+
+For detailed information about the codebase structure and development guidelines, see [STRUCTURE.md](./STRUCTURE.md).
 
 ## 🔒 Security Features
 
