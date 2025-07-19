@@ -1,10 +1,10 @@
 import { proto } from "baileys";
-import { CommandInterface, CommandInfo } from "../core/CommandInterface.js";
-import { BotConfig, getCurrentConfig, log } from "../core/config.js";
-import { WebSocketInfo } from "../core/types.js";
-import { SessionService } from "../services/SessionService.js";
-import { YtDlpWrapper } from "../utils/ytdlp.js";
-import extractUrlsFromText from "../utils/extractUrlsFromText.js";
+import { CommandInterface, CommandInfo } from "../../core/CommandInterface.js";
+import { BotConfig, getCurrentConfig, log } from "../../core/config.js";
+import { WebSocketInfo } from "../../core/types.js";
+import { SessionService } from "../../services/SessionService.js";
+import { YtDlpWrapper } from "../../utils/media/ytdlp.js";
+import extractUrlsFromText from "../../utils/text/extractUrlsFromText.js";
 
 export class YTDLCommand extends CommandInterface {
   static commandInfo: CommandInfo = {

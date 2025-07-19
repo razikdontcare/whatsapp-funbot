@@ -1,17 +1,17 @@
-import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
-import { WebSocketInfo } from "../core/types.js";
-import { SessionService } from "../services/SessionService.js";
+import { CommandInfo, CommandInterface } from "../../core/CommandInterface.js";
+import { WebSocketInfo } from "../../core/types.js";
+import { SessionService } from "../../services/SessionService.js";
 import { proto } from "baileys";
 import {
   getUserRoles,
   getBotConfigService,
   getCurrentConfig,
   log,
-} from "../core/config.js";
+} from "../../core/config.js";
 import {
   BotConfigService,
   StoredBotConfig,
-} from "../services/BotConfigService.js";
+} from "../../services/BotConfigService.js";
 
 export class ConfigCommand extends CommandInterface {
   static commandInfo: CommandInfo = {

@@ -5,10 +5,9 @@ import wa, {
   DisconnectReason,
   AuthenticationState,
   isJidBroadcast,
-  makeInMemoryStore,
   fetchLatestBaileysVersion,
 } from "baileys";
-const { proto, Browsers } = wa;
+const { proto, Browsers, makeInMemoryStore } = wa;
 import { CommandHandler } from "./CommandHandler.js";
 import { SessionService } from "../services/SessionService.js";
 import { BotConfig, getCurrentConfig } from "./config.js";
@@ -19,7 +18,7 @@ import { useMongoDBAuthState } from "./auth.js";
 import MAIN_LOGGER from "baileys/lib/Utils/logger.js";
 import { closeMongoClient, getMongoClient } from "./mongo.js";
 import NodeCache from "node-cache";
-import { setCommandHandler } from "../utils/ai_tools.js";
+import { setCommandHandler } from "../utils/ai/ai_tools.js";
 
 const logger = MAIN_LOGGER.default.child({});
 logger.level = "silent";

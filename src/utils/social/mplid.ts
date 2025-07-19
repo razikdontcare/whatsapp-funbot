@@ -1,5 +1,5 @@
 import axios from "axios";
-import { log } from "../core/config.js";
+import { log } from "../../core/config.js";
 
 export interface ApiResponse<T> {
   success: boolean;

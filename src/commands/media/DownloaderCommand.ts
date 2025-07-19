@@ -1,12 +1,12 @@
 import axios, { AxiosResponse } from "axios";
 import { proto } from "baileys";
-import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
-import { BotConfig, getCurrentConfig, log } from "../core/config.js";
-import { WebSocketInfo } from "../core/types.js";
-import { SessionService } from "../services/SessionService.js";
-import extractUrlsFromText from "../utils/extractUrlsFromText.js";
+import { CommandInfo, CommandInterface } from "../../core/CommandInterface.js";
+import { BotConfig, getCurrentConfig, log } from "../../core/config.js";
+import { WebSocketInfo } from "../../core/types.js";
+import { SessionService } from "../../services/SessionService.js";
+import extractUrlsFromText from "../../utils/text/extractUrlsFromText.js";
 import { mimeType } from "mime-type/with-db";
-import { convertMp3ToOgg } from "../utils/ffmpeg.js";
+import { convertMp3ToOgg } from "../../utils/media/ffmpeg.js";
 
 type Status = "tunnel" | "redirect" | "error" | "picker" | "local-processing";
 

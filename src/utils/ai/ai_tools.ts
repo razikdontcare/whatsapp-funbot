@@ -1,7 +1,7 @@
 import { tavily } from "@tavily/core";
-import { log, BotConfig } from "../core/config.js";
-import { CommandHandler } from "../core/CommandHandler.js";
-import { WebSocketInfo } from "../core/types.js";
+import { log, BotConfig } from "../../core/config.js";
+import { CommandHandler } from "../../core/CommandHandler.js";
+import { WebSocketInfo } from "../../core/types.js";
 import { proto } from "baileys";
 
 const tavilyClient = tavily({

@@ -1,6 +1,6 @@
 import { config } from "dotenv";
 config(); // Load environment variables from .env file
-import { Logger } from "../utils/logger.js";
+import { Logger } from "../utils/common/logger.js";
 import { BotConfigService } from "../services/BotConfigService.js";
 import { getMongoClient } from "./mongo.js";
 

@@ -1,10 +1,11 @@
 {
   "compilerOptions": {
     // Node.js environment settings
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM"],
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "types": ["node"],
 
     // Basic options
     "esModuleInterop": true,
