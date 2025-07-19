@@ -49,29 +49,23 @@ export class CommandHandler {
     const isDev = process.env.NODE_ENV !== "production";
     const fileExtension = isDev ? ".ts" : ".js";
 
-    let files: string[] = [];
-    try {
-      files = fs
-        .readdirSync(commandsDir)
-        .filter((f) => f.endsWith(fileExtension));
-    } catch (error) {
-      // If no files found with one extension, try the other
+    const files = this.getCommandFiles(commandsDir, fileExtension);
+    if (files.length === 0) {
+      // Try the other extension if none found
       const altExtension = isDev ? ".js" : ".ts";
-      try {
-        files = fs
-          .readdirSync(commandsDir)
-          .filter((f) => f.endsWith(altExtension));
-      } catch (altError) {
-        log.error(`No command files found in ${commandsDir}`);
-        return;
-      }
+      files.push(...this.getCommandFiles(commandsDir, altExtension));
+    }
+
+    if (files.length === 0) {
+      log.error(`No command files found in ${commandsDir}`);
+      return;
     }
 
     log.info(`Loading ${files.length} command files from ${commandsDir}`);
 
     for (const file of files) {
       try {
-        const commandModule = await import(path.join(commandsDir, file));
+        const commandModule = await import(file);
         // Support both default and named exports
         const CommandClass =
           commandModule.default || Object.values(commandModule)[0];
@@ -89,6 +83,31 @@ export class CommandHandler {
     }
 
     log.info(`Successfully registered ${this.commands.size} commands`);
+  }
+
+  private getCommandFiles(dir: string, extension: string): string[] {
+    const files: string[] = [];
+    
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        
+        if (entry.isDirectory()) {
+          // Skip index.ts/js files in subdirectories for commands
+          if (entry.name !== 'index') {
+            files.push(...this.getCommandFiles(fullPath, extension));
+          }
+        } else if (entry.isFile() && entry.name.endsWith(extension) && entry.name !== 'index' + extension) {
+          files.push(fullPath);
+        }
+      }
+    } catch (error) {
+      log.error(`Error reading directory ${dir}:`, error);
+    }
+    
+    return files;
   }
 
   private registerCommand(info: CommandInfo): void {

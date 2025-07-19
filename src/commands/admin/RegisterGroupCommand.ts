@@ -1,9 +1,9 @@
-import { CommandInterface, CommandInfo } from "../core/CommandInterface.js";
-import { getMongoClient } from "../core/mongo.js";
+import { CommandInterface, CommandInfo } from "../../core/CommandInterface.js";
+import { getMongoClient } from "../../core/mongo.js";
 import { Collection, MongoClient } from "mongodb";
-import { getUserRoles } from "../core/config.js";
-import { WebSocketInfo } from "../core/types.js";
-import { SessionService } from "../services/SessionService.js";
+import { getUserRoles } from "../../core/config.js";
+import { WebSocketInfo } from "../../core/types.js";
+import { SessionService } from "../../services/SessionService.js";
 import { proto } from "baileys";
 
 // Collection name for group registry

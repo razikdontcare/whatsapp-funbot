@@ -1,12 +1,12 @@
 import axios from "axios";
-import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
-import { BotConfig, log } from "../core/config.js";
-import { WebSocketInfo } from "../core/types.js";
-import { SessionService } from "../services/SessionService.js";
+import { CommandInfo, CommandInterface } from "../../core/CommandInterface.js";
+import { BotConfig, log } from "../../core/config.js";
+import { WebSocketInfo } from "../../core/types.js";
+import { SessionService } from "../../services/SessionService.js";
 import {
   getRandomFufufafaComment,
   getFufufafaCommentById,
-} from "../utils/getFufufafaComments.js";
+} from "../../utils/social/getFufufafaComments.js";
 import sharp from "sharp";
 import { proto } from "baileys";
 

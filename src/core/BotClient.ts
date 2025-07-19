@@ -5,7 +5,6 @@ import wa, {
   DisconnectReason,
   AuthenticationState,
   isJidBroadcast,
-  makeInMemoryStore,
   fetchLatestBaileysVersion,
 } from "baileys";
 const { proto, Browsers } = wa;
@@ -19,7 +18,7 @@ import { useMongoDBAuthState } from "./auth.js";
 import MAIN_LOGGER from "baileys/lib/Utils/logger.js";
 import { closeMongoClient, getMongoClient } from "./mongo.js";
 import NodeCache from "node-cache";
-import { setCommandHandler } from "../utils/ai_tools.js";
+import { setCommandHandler } from "../utils/ai/ai_tools.js";
 
 const logger = MAIN_LOGGER.default.child({});
 logger.level = "silent";
@@ -43,11 +42,19 @@ export class BotClient {
   } | null = null;
   private usageService: CommandUsageService | null = null;
   private mongoClient: MongoClient | null = null;
-  private store = makeInMemoryStore({ logger });
+  private store: any; // Will be initialized in constructor
   private groupCache = new NodeCache({ stdTTL: 5 * 60, useClones: false });
 
   constructor() {
     this.sessionService = new SessionService();
+    // Initialize store here to avoid import issues
+    try {
+      const { makeInMemoryStore } = require("baileys");
+      this.store = makeInMemoryStore({ logger });
+    } catch (err) {
+      log.warn("Could not initialize memory store:", err);
+      this.store = null;
+    }
     this.commandHandler = new CommandHandler(this.sessionService);
 
     // Set the command handler instance for AI tools

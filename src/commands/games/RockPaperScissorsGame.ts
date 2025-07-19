@@ -1,7 +1,7 @@
-import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
-import { SessionService } from "../services/SessionService.js";
-import { BotConfig, log } from "../core/config.js";
-import { WebSocketInfo, Session } from "../core/types.js";
+import { CommandInfo, CommandInterface } from "../../core/CommandInterface.js";
+import { SessionService } from "../../services/SessionService.js";
+import { BotConfig, log } from "../../core/config.js";
+import { WebSocketInfo, Session } from "../../core/types.js";
 import { proto } from "baileys";
 
 type InputRPSChoice =

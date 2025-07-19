@@ -1,12 +1,12 @@
-import { BotConfig, log } from "../core/config.js";
-import { SessionService } from "../services/SessionService.js";
-import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
-import { WebSocketInfo, Session } from "../core/types.js";
-import { getRandomKBBI } from "../utils/randomKBBI.js";
+import { BotConfig, log } from "../../core/config.js";
+import { SessionService } from "../../services/SessionService.js";
+import { CommandInfo, CommandInterface } from "../../core/CommandInterface.js";
+import { WebSocketInfo, Session } from "../../core/types.js";
+import { getRandomKBBI } from "../../utils/text/randomKBBI.js";
 import { randomBytes } from "crypto";
 import { proto } from "baileys";
-import { GameLeaderboardService } from "../services/GameLeaderboardService.js";
-import { getMongoClient } from "../core/mongo.js";
+import { GameLeaderboardService } from "../../services/GameLeaderboardService.js";
+import { getMongoClient } from "../../core/mongo.js";
 
 const MAX_ATTEMPTS = 6;
 const MASK_CHAR = "#";
