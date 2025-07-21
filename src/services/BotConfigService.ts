@@ -49,6 +49,7 @@ export interface StoredBotConfig {
   // Metadata
   lastUpdated?: Date;
   updatedBy?: string;
+  maintenanceMode?: boolean;
 }
 
 export class BotConfigService {
@@ -167,6 +168,8 @@ export class BotConfigService {
       admins: storedConfig.admins ?? BotConfig.admins,
       moderators: storedConfig.moderators ?? BotConfig.moderators,
       vips: storedConfig.vips ?? BotConfig.vips,
+      maintenanceMode:
+        storedConfig.maintenanceMode ?? BotConfig.maintenanceMode,
     };
   }
 
@@ -315,6 +318,7 @@ export class BotConfigService {
       vips: BotConfig.vips,
       lastUpdated: new Date(),
       updatedBy: "system",
+      maintenanceMode: BotConfig.maintenanceMode || false,
     };
   }
 

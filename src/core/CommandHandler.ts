@@ -175,8 +175,16 @@ export class CommandHandler {
     msg: proto.IWebMessageInfo
   ): Promise<void> {
     try {
-      const { command, args } = await this.extractCommand(text);
       const config = await getCurrentConfig();
+
+      if (config.maintenanceMode && !config.admins.includes(user)) {
+        await sock.sendMessage(jid, {
+          text: `${config.emoji.error} Bot sedang dalam mode _maintenance_. Silakan coba lagi nanti.`,
+        });
+        return;
+      }
+
+      const { command, args } = await this.extractCommand(text);
 
       log.debug(
         `Handling command: ${command} with args: ${args.join(
@@ -225,7 +233,6 @@ export class CommandHandler {
             userRoles.includes(role)
           );
           if (!hasRole) {
-            const config = await getCurrentConfig();
             await sock.sendMessage(jid, {
               text: `${config.emoji.error} Kamu tidak memiliki izin untuk menggunakan perintah ini.`,
             });

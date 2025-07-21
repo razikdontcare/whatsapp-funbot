@@ -213,6 +213,9 @@ export class ConfigCommand extends CommandInterface {
         case "disablewarning":
           value = config.disableWarning;
           break;
+        case "maintenance":
+          value = config.maintenanceMode ? "Ya" : "Tidak";
+          break;
         case "admins":
           value = config.admins.join("\\n");
           break;
@@ -301,6 +304,11 @@ export class ConfigCommand extends CommandInterface {
         const disableWarning =
           value.toLowerCase() === "true" || value.toLowerCase() === "ya";
         updateData.disableWarning = disableWarning;
+        break;
+      case "maintenance":
+        const maintenanceMode =
+          value.toLowerCase() === "true" || value.toLowerCase() === "ya";
+        updateData.maintenanceMode = maintenanceMode;
         break;
       default:
         await sock.sendMessage(chatId, {
