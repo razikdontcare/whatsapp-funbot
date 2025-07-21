@@ -302,6 +302,11 @@ export class ConfigCommand extends CommandInterface {
           value.toLowerCase() === "true" || value.toLowerCase() === "ya";
         updateData.disableWarning = disableWarning;
         break;
+      case "maintenance":
+        const maintenanceMode =
+          value.toLowerCase() === "true" || value.toLowerCase() === "ya";
+        updateData.maintenanceMode = maintenanceMode;
+        break;
       default:
         await sock.sendMessage(chatId, {
           text: `❌ Parameter '${param}' tidak dapat diubah melalui command ini.`,

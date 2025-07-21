@@ -58,6 +58,7 @@ export const BotConfig = {
   admins: [] as string[],
   moderators: [] as string[],
   vips: [] as string[],
+  maintenanceMode: false,
 };
 
 // Singleton instance for dynamic configuration
