@@ -213,6 +213,9 @@ export class ConfigCommand extends CommandInterface {
         case "disablewarning":
           value = config.disableWarning;
           break;
+        case "maintenance":
+          value = config.maintenanceMode ? "Ya" : "Tidak";
+          break;
         case "admins":
           value = config.admins.join("\\n");
           break;
