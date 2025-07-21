@@ -225,7 +225,6 @@ export class CommandHandler {
             userRoles.includes(role)
           );
           if (!hasRole) {
-            const config = await getCurrentConfig();
             await sock.sendMessage(jid, {
               text: `${config.emoji.error} Kamu tidak memiliki izin untuk menggunakan perintah ini.`,
             });
