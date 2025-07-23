@@ -1,11 +1,17 @@
-import { MongoClient } from "mongodb";
+import { MongoClient, ServerApiVersion } from "mongodb";
 
 let client: MongoClient | null = null;
 
 export async function getMongoClient(): Promise<MongoClient> {
   if (!client) {
     const uri = process.env.MONGO_URI!;
-    client = new MongoClient(uri);
+    client = new MongoClient(uri, {
+      serverApi: {
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
+      },
+    });
     await client.connect();
   }
 
