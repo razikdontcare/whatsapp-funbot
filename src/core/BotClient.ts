@@ -5,7 +5,6 @@ import wa, {
   DisconnectReason,
   AuthenticationState,
   isJidBroadcast,
-  makeInMemoryStore,
   fetchLatestBaileysVersion,
 } from "baileys";
 const { proto, Browsers } = wa;
@@ -43,7 +42,6 @@ export class BotClient {
   } | null = null;
   private usageService: CommandUsageService | null = null;
   private mongoClient: MongoClient | null = null;
-  private store = makeInMemoryStore({ logger });
   private groupCache = new NodeCache({ stdTTL: 5 * 60, useClones: false });
 
   constructor() {
@@ -115,15 +113,15 @@ export class BotClient {
             // We'll just keep the original message unchanged
             return message;
           },
-          getMessage: async (key) => {
-            if (this.store) {
-              const msg = await this.store.loadMessage(key.remoteJid!, key.id!);
-              return msg?.message || undefined;
-            }
+          // getMessage: async (key) => {
+          //   if (this.store) {
+          //     const msg = await this.store.loadMessage(key.remoteJid!, key.id!);
+          //     return msg?.message || undefined;
+          //   }
 
-            // Only if store is present
-            return proto.Message.fromObject({});
-          },
+          //   // Only if store is present
+          //   return proto.Message.fromObject({});
+          // },
           cachedGroupMetadata: async (jid) => this.groupCache.get(jid),
         });
 
@@ -133,7 +131,7 @@ export class BotClient {
           this.usageService
         );
 
-        this.store.bind(this.sock.ev);
+        // this.store.bind(this.sock.ev);
       } catch (error) {
         log.error("Failed to initialize WhatsApp session:", error);
         // Wait before trying to reconnect
