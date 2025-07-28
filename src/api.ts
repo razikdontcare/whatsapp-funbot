@@ -5,9 +5,13 @@ import { CommandUsageService } from "./services/CommandUsageService.js";
 import { GameLeaderboardService } from "./services/GameLeaderboardService.js";
 import { BotClient } from "./core/BotClient.js";
 import { getBotConfigService } from "./core/config.js";
+import QRCode from "qrcode";
 
 const app = new Hono();
 const JID_SUFFIX = "@s.whatsapp.net";
+
+// Store SSE connections for QR code updates
+const qrConnections = new Set<any>();
 
 // REST API: Get all command usage stats
 app.get("/api/command-usage", async (c) => {
@@ -181,6 +185,177 @@ app.post("/api/config/roles/:action", async (c) => {
     }
   } catch (err) {
     return c.json({ error: "Failed to manage user role" }, 500);
+  }
+});
+
+// REST API: Get current QR code as image for WhatsApp authentication
+app.get("/api/qr", async (c) => {
+  try {
+    const botClient = getBotClient();
+    if (!botClient) {
+      return c.json({ error: "Bot client not available" }, 503);
+    }
+
+    const qr = (botClient as any).currentQR;
+    if (!qr) {
+      return c.json(
+        {
+          error: "No QR code available",
+          message: "Bot may already be connected or QR code expired",
+        },
+        404
+      );
+    }
+
+    // Generate QR code as PNG buffer
+    const qrBuffer = await QRCode.toBuffer(qr, {
+      type: "png",
+      width: 300,
+      margin: 2,
+      color: {
+        dark: "#000000",
+        light: "#FFFFFF",
+      },
+    });
+
+    // Return image response
+    c.header("Content-Type", "image/png");
+    c.header("Cache-Control", "no-cache");
+    return c.body(qrBuffer);
+  } catch (err) {
+    return c.json(
+      { error: "Failed to generate QR code", details: String(err) },
+      500
+    );
+  }
+});
+
+// REST API: Get current QR code as JSON (alternative endpoint)
+app.get("/api/qr/json", async (c) => {
+  try {
+    const botClient = getBotClient();
+    if (!botClient) {
+      return c.json({ error: "Bot client not available" }, 503);
+    }
+
+    const qr = (botClient as any).currentQR;
+    if (!qr) {
+      return c.json(
+        {
+          error: "No QR code available",
+          message: "Bot may already be connected or QR code expired",
+        },
+        404
+      );
+    }
+
+    return c.json({ qr, timestamp: Date.now() });
+  } catch (err) {
+    return c.json(
+      { error: "Failed to get QR code", details: String(err) },
+      500
+    );
+  }
+});
+
+// REST API: Server-Sent Events for QR code updates
+app.get("/api/qr/stream", async (c) => {
+  const stream = new ReadableStream({
+    start(controller) {
+      // Send initial connection message
+      const encoder = new TextEncoder();
+      controller.enqueue(encoder.encode('data: {"type":"connected"}\n\n'));
+
+      // Store connection for QR updates
+      const connection = {
+        controller,
+        encoder,
+        send: (data: any) => {
+          try {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
+            );
+          } catch (err) {
+            // Connection closed, remove from set
+            qrConnections.delete(connection);
+          }
+        },
+      };
+
+      qrConnections.add(connection);
+
+      // Send current QR status
+      const botClient = getBotClient();
+      if (botClient) {
+        const qr = (botClient as any).currentQR;
+        const sock = (botClient as any)["sock"];
+        const connected = !!(sock && sock.user);
+
+        connection.send({
+          type: "status",
+          connected,
+          hasQR: !!qr,
+          timestamp: Date.now(),
+        });
+      }
+    },
+    cancel() {
+      // Remove connection when stream is cancelled
+      qrConnections.forEach((conn) => {
+        if (conn.controller === this) {
+          qrConnections.delete(conn);
+        }
+      });
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Cache-Control",
+    },
+  });
+});
+
+// Function to broadcast QR updates to all SSE connections
+export function broadcastQRUpdate(
+  type: "new_qr" | "connected" | "disconnected",
+  data?: any
+) {
+  const message = {
+    type,
+    timestamp: Date.now(),
+    ...data,
+  };
+
+  qrConnections.forEach((connection) => {
+    connection.send(message);
+  });
+}
+
+// REST API: Get bot connection status
+app.get("/api/status", async (c) => {
+  try {
+    const botClient = getBotClient();
+    if (!botClient) {
+      return c.json({ status: "unavailable", connected: false });
+    }
+
+    const sock = (botClient as any)["sock"];
+    const hasQR = !!(botClient as any).currentQR;
+    const connected = !!(sock && sock.user);
+
+    return c.json({
+      status: connected ? "connected" : hasQR ? "qr_ready" : "disconnected",
+      connected,
+      hasQR,
+      user: connected ? sock.user : null,
+    });
+  } catch (err) {
+    return c.json({ status: "error", connected: false }, 500);
   }
 });
 
