@@ -5,7 +5,6 @@ import wa, {
   DisconnectReason,
   AuthenticationState,
   isJidBroadcast,
-  makeInMemoryStore,
   fetchLatestBaileysVersion,
 } from "baileys";
 const { proto, Browsers } = wa;
@@ -20,6 +19,20 @@ import MAIN_LOGGER from "baileys/lib/Utils/logger.js";
 import { closeMongoClient, getMongoClient } from "./mongo.js";
 import NodeCache from "node-cache";
 import { setCommandHandler } from "../utils/ai_tools.js";
+
+// Import the broadcast function
+let broadcastQRUpdate:
+  | ((type: "new_qr" | "connected" | "disconnected", data?: any) => void)
+  | null = null;
+
+// Dynamically import to avoid circular dependency
+import("../api.js")
+  .then((module) => {
+    broadcastQRUpdate = module.broadcastQRUpdate;
+  })
+  .catch(() => {
+    // API module not available, continue without broadcasting
+  });
 
 const logger = MAIN_LOGGER.default.child({});
 logger.level = "silent";
@@ -43,8 +56,8 @@ export class BotClient {
   } | null = null;
   private usageService: CommandUsageService | null = null;
   private mongoClient: MongoClient | null = null;
-  private store = makeInMemoryStore({ logger });
   private groupCache = new NodeCache({ stdTTL: 5 * 60, useClones: false });
+  public currentQR: string | null = null; // Store current QR code
 
   constructor() {
     this.sessionService = new SessionService();
@@ -115,15 +128,15 @@ export class BotClient {
             // We'll just keep the original message unchanged
             return message;
           },
-          getMessage: async (key) => {
-            if (this.store) {
-              const msg = await this.store.loadMessage(key.remoteJid!, key.id!);
-              return msg?.message || undefined;
-            }
+          // getMessage: async (key) => {
+          //   if (this.store) {
+          //     const msg = await this.store.loadMessage(key.remoteJid!, key.id!);
+          //     return msg?.message || undefined;
+          //   }
 
-            // Only if store is present
-            return proto.Message.fromObject({});
-          },
+          //   // Only if store is present
+          //   return proto.Message.fromObject({});
+          // },
           cachedGroupMetadata: async (jid) => this.groupCache.get(jid),
         });
 
@@ -133,7 +146,7 @@ export class BotClient {
           this.usageService
         );
 
-        this.store.bind(this.sock.ev);
+        // this.store.bind(this.sock.ev);
       } catch (error) {
         log.error("Failed to initialize WhatsApp session:", error);
         // Wait before trying to reconnect
@@ -148,8 +161,15 @@ export class BotClient {
         // Display QR code refresh info if a new QR is generated
         if (qr) {
           log.info("New QR code generated, please scan with WhatsApp app");
+          // Store the QR code for API access
+          this.currentQR = qr;
           // Reset reconnect attempts when a new QR is shown
           this.reconnectAttempts = 0;
+
+          // Broadcast QR update to SSE clients
+          if (broadcastQRUpdate) {
+            broadcastQRUpdate("new_qr", { hasQR: true });
+          }
         }
 
         if (connection === "close") {
@@ -195,6 +215,13 @@ export class BotClient {
         } else if (connection === "open") {
           // Reset reconnect attempts on successful connection
           this.reconnectAttempts = 0;
+          // Clear QR code when connected
+          this.currentQR = null;
+
+          // Broadcast connection success to SSE clients
+          if (broadcastQRUpdate) {
+            broadcastQRUpdate("connected", { hasQR: false, connected: true });
+          }
 
           log.info(
             `Connected to WhatsApp as ${this.botId} with session name ${BotConfig.sessionName}`
