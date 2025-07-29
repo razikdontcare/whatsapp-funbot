@@ -8,6 +8,50 @@ import { getBotConfigService } from "./core/config.js";
 import QRCode from "qrcode";
 
 const app = new Hono();
+
+// --- Simple in-memory rate limiter ---
+const rateLimitStore = new Map();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = 10; // max requests per window
+
+function getClientIP(c: any): string {
+  // Try to get IP from headers or connection
+  return (
+    c.req.header("x-forwarded-for") ||
+    c.req.header("x-real-ip") ||
+    c.req.raw?.socket?.remoteAddress ||
+    "unknown"
+  );
+}
+
+function rateLimitMiddleware(path: string) {
+  return async (c: any, next: any) => {
+    const ip = getClientIP(c);
+    const key = `${path}:${ip}`;
+    const now = Date.now();
+    let entry = rateLimitStore.get(key);
+    if (!entry || now - entry.start > RATE_LIMIT_WINDOW) {
+      entry = { count: 1, start: now };
+    } else {
+      entry.count++;
+    }
+    rateLimitStore.set(key, entry);
+    if (entry.count > RATE_LIMIT_MAX) {
+      return c.json({ error: "Rate limit exceeded. Try again later." }, 429);
+    }
+    await next();
+  };
+}
+
+// --- Simple token auth for QR endpoint ---
+const QR_AUTH_TOKEN = process.env.QR_AUTH_TOKEN || "changeme";
+function qrAuthMiddleware(c: any, next: any) {
+  const auth = c.req.header("authorization") || c.req.query("token");
+  if (!auth || auth.replace(/^Bearer /, "") !== QR_AUTH_TOKEN) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  return next();
+}
 const JID_SUFFIX = "@s.whatsapp.net";
 
 // Store SSE connections for QR code updates
@@ -48,31 +92,35 @@ function getBotClient(): BotClient | null {
 }
 
 // REST API: Send a WhatsApp message
-app.post("/api/send-message", async (c) => {
-  const { text, jid } = await c.req.json();
-  if (!jid || !text) {
-    return c.json({ error: "Missing 'jid' or 'text' in request body" }, 400);
-  }
-  try {
-    const botClient = getBotClient();
-    if (
-      !botClient ||
-      !(botClient as any)["sock"] ||
-      !(botClient as any)["sock"]
-    ) {
-      return c.json({ error: "Bot is not ready or not connected" }, 503);
+app.post(
+  "/api/send-message",
+  rateLimitMiddleware("/api/send-message"),
+  async (c) => {
+    const { text, jid } = await c.req.json();
+    if (!jid || !text) {
+      return c.json({ error: "Missing 'jid' or 'text' in request body" }, 400);
     }
-    const sock = (botClient as any)["sock"];
-    let targetJid = jid.endsWith(JID_SUFFIX) ? jid : jid + JID_SUFFIX;
-    await sock.sendMessage(targetJid, { text });
-    return c.json({ success: true });
-  } catch (err) {
-    return c.json(
-      { error: "Failed to send message", details: String(err) },
-      500
-    );
+    try {
+      const botClient = getBotClient();
+      if (
+        !botClient ||
+        !(botClient as any)["sock"] ||
+        !(botClient as any)["sock"]
+      ) {
+        return c.json({ error: "Bot is not ready or not connected" }, 503);
+      }
+      const sock = (botClient as any)["sock"];
+      let targetJid = jid.endsWith(JID_SUFFIX) ? jid : jid + JID_SUFFIX;
+      await sock.sendMessage(targetJid, { text });
+      return c.json({ success: true });
+    } catch (err) {
+      return c.json(
+        { error: "Failed to send message", details: String(err) },
+        500
+      );
+    }
   }
-});
+);
 
 // REST API: Get bot configuration
 app.get("/api/config", async (c) => {
@@ -189,49 +237,54 @@ app.post("/api/config/roles/:action", async (c) => {
 });
 
 // REST API: Get current QR code as image for WhatsApp authentication
-app.get("/api/qr", async (c) => {
-  try {
-    const botClient = getBotClient();
-    if (!botClient) {
-      return c.json({ error: "Bot client not available" }, 503);
-    }
+app.get(
+  "/api/qr",
+  rateLimitMiddleware("/api/qr"),
+  qrAuthMiddleware,
+  async (c) => {
+    try {
+      const botClient = getBotClient();
+      if (!botClient) {
+        return c.json({ error: "Bot client not available" }, 503);
+      }
 
-    const qr = (botClient as any).currentQR;
-    if (!qr) {
-      return c.json(
-        {
-          error: "No QR code available",
-          message: "Bot may already be connected or QR code expired",
+      const qr = (botClient as any).currentQR;
+      if (!qr) {
+        return c.json(
+          {
+            error: "No QR code available",
+            message: "Bot may already be connected or QR code expired",
+          },
+          404
+        );
+      }
+
+      // Generate QR code as PNG buffer
+      const qrBuffer = await QRCode.toBuffer(qr, {
+        type: "png",
+        width: 300,
+        margin: 2,
+        color: {
+          dark: "#000000",
+          light: "#FFFFFF",
         },
-        404
+      });
+
+      // Return image response
+      c.header("Content-Type", "image/png");
+      c.header("Cache-Control", "no-cache");
+      return c.body(qrBuffer);
+    } catch (err) {
+      return c.json(
+        { error: "Failed to generate QR code", details: String(err) },
+        500
       );
     }
-
-    // Generate QR code as PNG buffer
-    const qrBuffer = await QRCode.toBuffer(qr, {
-      type: "png",
-      width: 300,
-      margin: 2,
-      color: {
-        dark: "#000000",
-        light: "#FFFFFF",
-      },
-    });
-
-    // Return image response
-    c.header("Content-Type", "image/png");
-    c.header("Cache-Control", "no-cache");
-    return c.body(qrBuffer);
-  } catch (err) {
-    return c.json(
-      { error: "Failed to generate QR code", details: String(err) },
-      500
-    );
   }
-});
+);
 
 // REST API: Get current QR code as JSON (alternative endpoint)
-app.get("/api/qr/json", async (c) => {
+app.get("/api/qr/json", rateLimitMiddleware("/api/qr/json"), async (c) => {
   try {
     const botClient = getBotClient();
     if (!botClient) {
@@ -259,7 +312,7 @@ app.get("/api/qr/json", async (c) => {
 });
 
 // REST API: Server-Sent Events for QR code updates
-app.get("/api/qr/stream", async (c) => {
+app.get("/api/qr/stream", rateLimitMiddleware("/api/qr/stream"), async (c) => {
   const stream = new ReadableStream({
     start(controller) {
       // Send initial connection message
