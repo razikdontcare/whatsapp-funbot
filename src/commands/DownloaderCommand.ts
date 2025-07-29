@@ -121,7 +121,7 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
       } catch (error) {
         log.error("Failed to fetch supported platforms:", error);
         await sock.sendMessage(jid, {
-          text: "❌ Gagal mengambil daftar platform yang didukung. Coba lagi nanti.",
+          text: "❌ Duh, gabisa ambil list platform yang didukung. Coba lagi aja ya bestie! 😅",
         });
       }
       return;
@@ -141,25 +141,39 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
     log.info("Download mode set to:", downloadMode);
 
     // 2. Try to extract URL from args or quoted message
-    let url = extractUrlsFromText(args.join(" "))[0] || null;
+    let url: string | null = null;
+
+    try {
+      const urlsFromArgs = extractUrlsFromText(args.join(" "));
+      url = urlsFromArgs.length > 0 ? urlsFromArgs[0] : null;
+    } catch (error) {
+      log.error("Failed to extract URL from args:", error);
+    }
+
     if (!url && msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
-      // Try to extract from quoted message text
-      const quoted = msg.message.extendedTextMessage.contextInfo.quotedMessage;
-      let quotedText = "";
-      if (quoted?.conversation) quotedText = quoted.conversation;
-      else if (quoted?.extendedTextMessage?.text)
-        quotedText = quoted.extendedTextMessage.text;
-      else if (quoted?.imageMessage?.caption)
-        quotedText = quoted.imageMessage.caption;
-      if (quotedText) {
-        const urls = extractUrlsFromText(quotedText);
-        url = urls[0] || null;
+      try {
+        // Try to extract from quoted message text
+        const quoted =
+          msg.message.extendedTextMessage.contextInfo.quotedMessage;
+        let quotedText = "";
+        if (quoted?.conversation) quotedText = quoted.conversation;
+        else if (quoted?.extendedTextMessage?.text)
+          quotedText = quoted.extendedTextMessage.text;
+        else if (quoted?.imageMessage?.caption)
+          quotedText = quoted.imageMessage.caption;
+
+        if (quotedText) {
+          const urls = extractUrlsFromText(quotedText);
+          url = urls.length > 0 ? urls[0] : null;
+        }
+      } catch (error) {
+        log.error("Failed to extract URL from quoted message:", error);
       }
     }
 
     if (!url) {
       await sock.sendMessage(jid, {
-        text: `❌ URL tidak ditemukan!\n\n*Cara penggunaan:*\n• ${BotConfig.prefix}downloader <url>\n• Reply pesan yang berisi URL dengan ${BotConfig.prefix}downloader\n\nGunakan ${BotConfig.prefix}downloader url untuk melihat platform yang didukung.`,
+        text: `💔 Eh mana URL-nya? Gak ada yang bisa didownload nih!\n\n*How to use:*\n• ${BotConfig.prefix}downloader <url> — Paste link kamu di sini\n• Reply pesan yang ada link-nya pakai ${BotConfig.prefix}downloader\n\nBingung platform mana aja? Ketik ${BotConfig.prefix}downloader url buat liat list-nya! ✨`,
       });
       return;
     }
@@ -182,7 +196,7 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
         // If multiple media URLs are returned, send them all
         const mediaCount = mediaResponse.length;
         await sock.sendMessage(jid, {
-          text: `📁 Ditemukan ${mediaCount} media. Mengirim...`,
+          text: `📁 Ketemu ${mediaCount} media nih! Ngirim sekarang... 🚀`,
         });
 
         let successCount = 0;
@@ -211,11 +225,11 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
 
         if (successCount === 0) {
           await sock.sendMessage(jid, {
-            text: "❌ Gagal mengirim semua media. Coba lagi nanti.",
+            text: "💀 Waduh, semua media gagal dikirim. Ada error nih, coba lagi nanti ya!",
           });
         } else if (successCount < mediaCount) {
           await sock.sendMessage(jid, {
-            text: `⚠️ Berhasil mengirim ${successCount} dari ${mediaCount} media.`,
+            text: `🤔 Hmm, cuma berhasil kirim ${successCount} dari ${mediaCount} media. Yang lain ada kendala kayaknya~`,
           });
         }
       } else {
@@ -241,8 +255,18 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
                 responseType: "arraybuffer",
                 family: 4,
                 timeout: 30000, // Increased timeout for audio files
+                maxContentLength: 50 * 1024 * 1024, // 50MB limit
+                maxBodyLength: 50 * 1024 * 1024, // 50MB limit
               });
+
               const audioBuffer = Buffer.from(resp.data);
+
+              // Check buffer size before processing
+              if (audioBuffer.length > 50 * 1024 * 1024) {
+                // 50MB
+                throw new Error("Audio file too large");
+              }
+
               // Convert MP3 to OGG if needed
               const oggBuffer = await convertMp3ToOgg(audioBuffer);
 
@@ -253,24 +277,24 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
               });
 
               await sock.sendMessage(jid, {
-                text: `🎵 Audio berhasil dikirim. Format telah dikonversi ke OGG untuk kompatibilitas WhatsApp.\n\nJika membutuhkan format asli: ${mediaResponse.url}`,
+                text: `🎵 Audio udah sampe! Gw convert ke OGG biar WA-nya happy~\n\nKalo mau format asli ya langsung aja: ${mediaResponse.url}`,
               });
             } catch (audioError) {
               log.error("Failed to process audio:", audioError);
               await sock.sendMessage(jid, {
-                text: `❌ Gagal memproses audio. Unduh langsung dari: ${mediaResponse.url}`,
+                text: `💔 Yah, audio-nya error pas diproses. Langsung download aja ya: ${mediaResponse.url}`,
               });
             }
           } else {
             await sock.sendMessage(jid, {
-              text: `❌ Tipe media tidak didukung untuk pengiriman otomatis.\n\nUnduh langsung dari: ${mediaResponse.url}`,
+              text: `🙄 Media type-nya gak support buat dikirim otomatis.\n\nYa udah, download manual aja: ${mediaResponse.url}`,
             });
             return;
           }
         } catch (sendError) {
           log.error("Failed to send media:", sendError);
           await sock.sendMessage(jid, {
-            text: `❌ Gagal mengirim media. Unduh langsung dari: ${mediaResponse.url}`,
+            text: `😔 Yah gabisa kirim media-nya. Tapi tenang, direct link-nya ada kok: ${mediaResponse.url}`,
           });
           return;
         }
@@ -280,7 +304,7 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
     } catch (unexpectedError) {
       log.error("Unexpected error in handleCommand:", unexpectedError);
       await sock.sendMessage(jid, {
-        text: "❌ Terjadi kesalahan tak terduga. Silakan coba lagi nanti.",
+        text: "💀 Yah ada error yang aneh nih. Coba lagi aja nanti ya bestie! 🥺",
       });
     }
   }
@@ -292,9 +316,9 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
     if (!mime) return "unknown";
 
     const mimeString = Array.isArray(mime) ? mime[0] : mime;
+    if (mimeString === "image/gif") return "gif"; // Check GIF first before general image check
     if (mimeString.startsWith("image/")) return "image";
     if (mimeString.startsWith("video/")) return "video";
-    if (mimeString === "image/gif") return "gif";
     if (mimeString.startsWith("audio/")) return "audio";
 
     return "unknown";
@@ -345,14 +369,18 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
     try {
       // Validate URL format
       if (!url || typeof url !== "string" || url.trim().length === 0) {
-        return new Error("URL tidak valid atau kosong.");
+        return new Error(
+          "Heh, URL-nya mana? Kosong gini gimana mau download 🤨"
+        );
       }
 
       // Basic URL validation
       try {
         new URL(url);
       } catch {
-        return new Error("Format URL tidak valid.");
+        return new Error(
+          "URL-nya aneh deh, formatnya salah. Paste yang bener dong! 😅"
+        );
       }
 
       // Prepare request body according to API specification
@@ -381,16 +409,16 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
         switch (errorCode) {
           case "error.api.fetch.empty":
             return new Error(
-              "Tidak ada konten yang ditemukan di URL tersebut."
+              "Duh, gak ada konten apapun di URL itu. Coba link yang lain! 😕"
             );
           case "error.api.link.unsupported":
             const service = context?.service
-              ? ` Link ${context.service} yang kamu masukkan tidak didukung. Pastikan untuk menggunakan URL yang valid.`
+              ? ` Link ${context.service} yang kamu kasih gak didukung nih. Make sure link-nya valid ya bestie! 🤷‍♀️`
               : "";
-            return new Error(`URL tidak didukung.${service}`);
+            return new Error(`Yah URL-nya gak support.${service}`);
           case "error.api.link.invalid":
             return new Error(
-              "URL tidak valid. Pastikan URL yang Anda masukkan benar."
+              "Link-nya invalid bestie. Double check lagi dong! 🔍"
             );
           default:
             // For all other error codes, provide a general error message
@@ -401,7 +429,7 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
               ? ` (Limit: ${context.limit})`
               : "";
             return new Error(
-              `Gagal mengunduh media${contextInfo}. Silakan coba lagi nanti.`
+              `Waduh gagal download media-nya${contextInfo}. Coba lagi aja nanti! 🥺`
             );
         }
       }
@@ -410,7 +438,7 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
       if (response.data.status === "local-processing") {
         log.warn("Local processing required but not supported:", response.data);
         return new Error(
-          "Konten memerlukan pemrosesan lokal yang tidak didukung. Coba gunakan URL lain."
+          "Oof, konten ini butuh processing khusus yang belum disupport. Coba link lain ya! 😅"
         );
       }
 
@@ -424,7 +452,9 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
         const picker = pickerData.picker;
 
         if (!picker || picker.length === 0) {
-          return new Error("Tidak ada opsi media yang tersedia untuk URL ini.");
+          return new Error(
+            "Gak ada opsi media yang bisa diambil dari URL ini. Sad 😢"
+          );
         }
 
         // Return URLs of all available media
@@ -442,7 +472,9 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
         >;
 
         if (!mediaData.url) {
-          return new Error("URL media tidak ditemukan dalam respons server.");
+          return new Error(
+            "Eh, server gak kasih link media-nya. Aneh banget! 🤔"
+          );
         }
 
         return {
@@ -454,7 +486,7 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
       // Handle unexpected status
       log.error("Unexpected response status:", response.data.status);
       return new Error(
-        `Status respons tidak diketahui: ${response.data.status}`
+        `Server response-nya aneh: ${response.data.status}. Something's not right 🤨`
       );
     } catch (error) {
       log.error("Error downloading media:", error);
@@ -463,50 +495,54 @@ ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
       if (axios.isAxiosError(error)) {
         if (error.code === "ECONNABORTED") {
           return new Error(
-            "Koneksi timeout. Server terlalu lama merespons. Coba lagi nanti."
+            "Yah, server lama banget responnya. Timeout deh! Coba lagi nanti ya 😴"
           );
         }
         if (error.code === "ENOTFOUND" || error.code === "ECONNREFUSED") {
           return new Error(
-            "Tidak dapat terhubung ke server unduhan. Hubungi pengelola bot jika masalah berlanjut."
+            "Gabisa connect ke server download. Ada masalah nih, kontak admin dong! 📞"
           );
         }
         if (error.response?.status === 429) {
-          return new Error("Terlalu banyak permintaan. Coba lagi nanti.");
+          return new Error(
+            "Waduh, terlalu banyak request! Slow down bestie 🐌"
+          );
         }
         if (error.response?.status === 503) {
-          return new Error("Server sedang tidak tersedia. Coba lagi nanti.");
+          return new Error("Server-nya lagi down. Coba lagi nanti ya! 🔧");
         }
         if (error.response && error.response.status >= 500) {
           return new Error(
-            "Server mengalami kesalahan internal. Coba lagi nanti."
+            "Server error nih. Admin-nya pasti lagi pusing! Coba lagi nanti 🤕"
           );
         }
         if (error.response?.status === 400) {
           return new Error(
-            "Permintaan tidak valid. Periksa URL yang Anda masukkan."
+            "Request-nya invalid. Cek lagi URL yang kamu masukin! 🔍"
           );
         }
         if (error.response?.status === 404) {
           return new Error(
-            "Endpoint tidak ditemukan. Mungkin ada masalah dengan konfigurasi server. Hubungi pengelola bot jika masalah berlanjut."
+            "Endpoint gak ketemu. Sepertinya ada config yang salah. Hit up admin! 🚨"
           );
         }
 
         return new Error(
-          `Kesalahan HTTP ${error.response?.status || "unknown"}: ${
+          `HTTP error ${error.response?.status || "unknown"}: ${
             error.message
-          }`
+          } - Something went wrong bestie! 😵`
         );
       }
 
       // Handle other types of errors
       if (error instanceof Error) {
-        return new Error(`Kesalahan jaringan: ${error.message}`);
+        return new Error(
+          `Network error: ${error.message} - Internet lagi lemot? 🐌`
+        );
       }
 
       return new Error(
-        "Kesalahan tidak diketahui terjadi saat mengunduh media."
+        "Ada error yang gak jelas nih pas download media. Mystery error! 👻"
       );
     }
   }

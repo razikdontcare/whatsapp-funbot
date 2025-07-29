@@ -160,11 +160,13 @@ export class CommandHandler {
       }
     }
 
-    const [command, ...args] = text
-      .slice(usedPrefix.length)
-      .trim()
-      .split(/\s+/);
-    return { command: command.toLocaleLowerCase(), args };
+    const commandText = text.slice(usedPrefix.length).trim();
+    if (!commandText) {
+      return { command: "", args: [] };
+    }
+
+    const [command, ...args] = commandText.split(/\s+/);
+    return { command: command.toLowerCase(), args };
   }
 
   async handleCommand(
@@ -175,6 +177,11 @@ export class CommandHandler {
     msg: proto.IWebMessageInfo
   ): Promise<void> {
     try {
+      // Ensure initialization is complete before processing commands
+      if (!this.initialized) {
+        await this.waitForInitialization();
+      }
+
       const config = await getCurrentConfig();
 
       if (config.maintenanceMode && !config.admins.includes(user)) {
