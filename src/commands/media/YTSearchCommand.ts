@@ -1,8 +1,9 @@
+import { CommandCategory } from "../../types/command-category.js";
 import { proto } from "baileys";
-import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
-import { WebSocketInfo } from "../core/types.js";
-import { SessionService } from "../services/SessionService.js";
-import { BotConfig } from "../core/config.js";
+import { CommandInfo, CommandInterface } from "../../core/CommandInterface.js";
+import { WebSocketInfo } from "../../types/session.js";
+import { SessionService } from "../../services/SessionService.js";
+import { BotConfig } from "../../core/config.js";
 
 export class YTSearchCommand extends CommandInterface {
   static commandInfo: CommandInfo = {
@@ -17,7 +18,7 @@ export class YTSearchCommand extends CommandInterface {
 *Contoh:*
 • ${BotConfig.prefix}ytsearch Naykilla Kasih Aba Aba
 `,
-    category: "general",
+    category: CommandCategory.General,
     commandClass: YTSearchCommand,
     cooldown: 5000,
     maxUses: 10,
@@ -70,7 +71,7 @@ export class YTSearchCommand extends CommandInterface {
         text: `Mengunduh ${isAudio ? "audio" : "video"} dari: ${video.title}`,
       });
       try {
-        const { YtDlpWrapper } = await import("../utils/ytdlp.js");
+        const { YtDlpWrapper } = await import("../../utils/ytdlp.js");
         const ytdl = new YtDlpWrapper();
         const result = isAudio
           ? await ytdl.downloadAudio(video.url)

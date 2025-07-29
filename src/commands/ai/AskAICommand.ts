@@ -1,17 +1,18 @@
+import { CommandCategory } from "../../types/command-category.js";
 import { proto } from "baileys";
-import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
-import { WebSocketInfo } from "../core/types.js";
-import { SessionService } from "../services/SessionService.js";
-import { BotConfig, log } from "../core/config.js";
-import { AIConversationService } from "../services/AIConversationService.js";
-import { AIResponseService } from "../services/AIResponseService.js";
+import { CommandInfo, CommandInterface } from "../../core/CommandInterface.js";
+import { WebSocketInfo } from "../../types/session.js";
+import { SessionService } from "../../services/SessionService.js";
+import { BotConfig, log } from "../../core/config.js";
+import { AIConversationService } from "../../services/AIConversationService.js";
+import { AIResponseService } from "../../services/AIResponseService.js";
 import Groq from "groq-sdk";
 import {
   web_search,
   get_bot_commands,
   get_command_help,
   execute_bot_command,
-} from "../utils/ai_tools.js";
+} from "../../utils/ai_tools.js";
 
 export class AskAICommand extends CommandInterface {
   static commandInfo: CommandInfo = {
@@ -34,7 +35,7 @@ export class AskAICommand extends CommandInterface {
 • ${BotConfig.prefix}ai Siapa kamu?
 • ${BotConfig.prefix}ai status
 • ${BotConfig.prefix}ai end`,
-    category: "general",
+    category: CommandCategory.General,
     commandClass: AskAICommand,
     cooldown: 5000,
     maxUses: 10,
@@ -240,7 +241,7 @@ export class AskAICommand extends CommandInterface {
   }
 
   private buildGroupContext(
-    groupResponses: import("../services/AIResponseService.js").AIGroupResponse[]
+    groupResponses: import("../../services/AIResponseService.js").AIGroupResponse[]
   ): string {
     if (groupResponses.length === 0) return "";
 
@@ -269,7 +270,7 @@ export class AskAICommand extends CommandInterface {
   }
 
   async getGroqCompletion(
-    conversationHistory: import("../services/AIConversationService.js").AIMessage[],
+    conversationHistory: import("../../services/AIConversationService.js").AIMessage[],
     user: string,
     userPushName: string | null | undefined,
     groupContext?: string,

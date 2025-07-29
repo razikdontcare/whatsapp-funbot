@@ -1,12 +1,13 @@
+import { CommandCategory } from "../../types/command-category.js";
 import axios, { AxiosResponse } from "axios";
 import { proto } from "baileys";
-import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
-import { BotConfig, getCurrentConfig, log } from "../core/config.js";
-import { WebSocketInfo } from "../core/types.js";
-import { SessionService } from "../services/SessionService.js";
-import extractUrlsFromText from "../utils/extractUrlsFromText.js";
+import { CommandInfo, CommandInterface } from "../../core/CommandInterface.js";
+import { BotConfig, getCurrentConfig, log } from "../../core/config.js";
+import { WebSocketInfo } from "../../types/session.js";
+import { SessionService } from "../../services/SessionService.js";
+import extractUrlsFromText from "../../utils/extractUrlsFromText.js";
 import { mimeType } from "mime-type/with-db";
-import { convertMp3ToOgg } from "../utils/ffmpeg.js";
+import { convertMp3ToOgg } from "../../utils/ffmpeg.js";
 
 type Status = "tunnel" | "redirect" | "error" | "picker" | "local-processing";
 
@@ -65,7 +66,7 @@ export class DownloaderCommand extends CommandInterface {
 
 *Contoh:*
 ${BotConfig.prefix}downloader https://vt.tiktok.com/ZSrG9QPK7/`,
-    category: "general",
+    category: CommandCategory.General,
     commandClass: DownloaderCommand,
     cooldown: 10000,
     maxUses: 3,

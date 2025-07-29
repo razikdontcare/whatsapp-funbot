@@ -1,10 +1,11 @@
+import { CommandCategory } from "../../types/command-category.js";
 import { proto } from "baileys";
-import { CommandInterface, CommandInfo } from "../core/CommandInterface.js";
-import { BotConfig, getCurrentConfig, log } from "../core/config.js";
-import { WebSocketInfo } from "../core/types.js";
-import { SessionService } from "../services/SessionService.js";
-import { YtDlpWrapper } from "../utils/ytdlp.js";
-import extractUrlsFromText from "../utils/extractUrlsFromText.js";
+import { CommandInterface, CommandInfo } from "../../core/CommandInterface.js";
+import { BotConfig, getCurrentConfig, log } from "../../core/config.js";
+import { WebSocketInfo } from "../../types/session.js";
+import { SessionService } from "../../services/SessionService.js";
+import { YtDlpWrapper } from "../../utils/ytdlp.js";
+import extractUrlsFromText from "../../utils/extractUrlsFromText.js";
 
 export class YTDLCommand extends CommandInterface {
   static commandInfo: CommandInfo = {
@@ -17,7 +18,7 @@ export class YTDLCommand extends CommandInterface {
 
 *Example:*
 • ${BotConfig.prefix}dla https://www.youtube.com/watch?v=dQw4w9WgXcQ`,
-    category: "general",
+    category: CommandCategory.General,
     commandClass: YTDLCommand,
     cooldown: 10000,
     maxUses: 5,

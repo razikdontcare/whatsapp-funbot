@@ -2,8 +2,8 @@ import cron from "node-cron";
 import { getMongoClient } from "../core/mongo.js";
 import { GroupSettingService } from "../services/GroupSettingService.js";
 import { BotConfig } from "../core/config.js";
-import { WebSocketInfo } from "../core/types.js";
-import { getAllRegisteredGroupJids } from "../commands/RegisterGroupCommand.js";
+import { WebSocketInfo } from "../types/session.js";
+import { getAllRegisteredGroupJids } from "../commands/admin/RegisterGroupCommand.js";
 
 // Example: Send a "Good morning!" message to all groups every day at 7am
 export async function scheduleDailyMorningMessage(sock: WebSocketInfo) {

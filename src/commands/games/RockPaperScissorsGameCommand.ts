@@ -1,7 +1,8 @@
-import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
-import { SessionService } from "../services/SessionService.js";
-import { BotConfig, log } from "../core/config.js";
-import { WebSocketInfo, Session } from "../core/types.js";
+import { CommandCategory } from "../../types/command-category.js";
+import { CommandInfo, CommandInterface } from "../../core/CommandInterface.js";
+import { SessionService } from "../../services/SessionService.js";
+import { BotConfig, log } from "../../core/config.js";
+import { WebSocketInfo, Session } from "../../types/session.js";
 import { proto } from "baileys";
 
 type InputRPSChoice =
@@ -52,7 +53,7 @@ export class RockPaperScissorsGame extends CommandInterface {
 !rps stop
 
 Untuk multiplayer, kedua pemain mengirim pilihan lewat DM ke bot.`,
-    category: "game",
+    category: CommandCategory.Game,
     commandClass: RockPaperScissorsGame,
     cooldown: 3000,
   };

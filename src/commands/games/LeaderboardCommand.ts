@@ -1,16 +1,17 @@
+import { CommandCategory } from "../../types/command-category.js";
 import { proto } from "baileys";
-import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
-import { getMongoClient } from "../core/mongo.js";
-import { WebSocketInfo } from "../core/types.js";
-import { GameLeaderboardService } from "../services/GameLeaderboardService.js";
-import { SessionService } from "../services/SessionService.js";
+import { CommandInfo, CommandInterface } from "../../core/CommandInterface.js";
+import { getMongoClient } from "../../core/mongo.js";
+import { WebSocketInfo } from "../../types/session.js";
+import { GameLeaderboardService } from "../../services/GameLeaderboardService.js";
+import { SessionService } from "../../services/SessionService.js";
 
 export class LeaderboardCommand extends CommandInterface {
   static commandInfo: CommandInfo = {
     name: "leaderboard",
     description: "Show the top players for a game (e.g., hangman, rps)",
     helpText: `*Usage:*\n!leaderboard <game>\n*Example:*\n!leaderboard hangman`,
-    category: "general",
+    category: CommandCategory.General,
     commandClass: LeaderboardCommand,
   };
 

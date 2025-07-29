@@ -1,17 +1,18 @@
-import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
-import { WebSocketInfo } from "../core/types.js";
-import { SessionService } from "../services/SessionService.js";
+import { CommandCategory } from "../../types/command-category.js";
+import { CommandInfo, CommandInterface } from "../../core/CommandInterface.js";
+import { WebSocketInfo } from "../../types/session.js";
+import { SessionService } from "../../services/SessionService.js";
 import { proto } from "baileys";
 import {
   getUserRoles,
   getBotConfigService,
   getCurrentConfig,
   log,
-} from "../core/config.js";
+} from "../../core/config.js";
 import {
   BotConfigService,
   StoredBotConfig,
-} from "../services/BotConfigService.js";
+} from "../../services/BotConfigService.js";
 
 export class ConfigCommand extends CommandInterface {
   static commandInfo: CommandInfo = {
@@ -22,7 +23,7 @@ export class ConfigCommand extends CommandInterface {
 • config get [<parameter>] — Get current configuration or specific parameter
 • config set <parameter> <value> — Set a configuration parameter
 • config reset — Reset configuration to default values`,
-    category: "admin",
+    category: CommandCategory.Admin,
     commandClass: ConfigCommand,
     requiredRoles: ["admin"],
   };

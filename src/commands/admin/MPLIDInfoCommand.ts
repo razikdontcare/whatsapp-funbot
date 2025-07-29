@@ -1,14 +1,15 @@
-import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
-import { BotConfig, log } from "../core/config.js";
-import { WebSocketInfo } from "../core/types.js";
-import { SessionService } from "../services/SessionService.js";
+import { CommandCategory } from "../../types/command-category.js";
+import { CommandInfo, CommandInterface } from "../../core/CommandInterface.js";
+import { BotConfig, log } from "../../core/config.js";
+import { WebSocketInfo } from "../../types/session.js";
+import { SessionService } from "../../services/SessionService.js";
 import { proto } from "baileys";
 import {
   getAllTeams,
   getSchedules,
   getStandings,
   getTeamById,
-} from "../utils/mplid.js";
+} from "../../utils/mplid.js";
 
 export class MPLIDInfo extends CommandInterface {
   static commandInfo: CommandInfo = {
@@ -25,7 +26,7 @@ export class MPLIDInfo extends CommandInterface {
 !mplid team ae
 
 ID Tim adalah singkatan nama tiap tim, contoh: "alter ego esports" memiliki ID "ae".`,
-    category: "general",
+    category: CommandCategory.General,
     commandClass: MPLIDInfo,
     cooldown: 5000,
     maxUses: 3,

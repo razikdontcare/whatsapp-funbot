@@ -1,7 +1,7 @@
 import { tavily } from "@tavily/core";
 import { log, BotConfig } from "../core/config.js";
 import { CommandHandler } from "../core/CommandHandler.js";
-import { WebSocketInfo } from "../core/types.js";
+import { WebSocketInfo } from "../types/session.js";
 import { proto } from "baileys";
 
 const tavilyClient = tavily({
@@ -22,27 +22,33 @@ export async function get_bot_commands(query?: string): Promise<string> {
     }
 
     const allCommands = commandHandlerInstance.getAllCommands();
-    
+
     let filteredCommands = allCommands;
-    
+
     // Filter by query if provided
     if (query) {
       const queryLower = query.toLowerCase();
-      filteredCommands = allCommands.filter(cmd => 
-        cmd.name.toLowerCase().includes(queryLower) ||
-        cmd.description.toLowerCase().includes(queryLower) ||
-        cmd.category.toLowerCase().includes(queryLower) ||
-        (cmd.aliases && cmd.aliases.some(alias => alias.toLowerCase().includes(queryLower)))
+      filteredCommands = allCommands.filter(
+        (cmd) =>
+          cmd.name.toLowerCase().includes(queryLower) ||
+          cmd.description.toLowerCase().includes(queryLower) ||
+          cmd.category.toLowerCase().includes(queryLower) ||
+          (cmd.aliases &&
+            cmd.aliases.some((alias) =>
+              alias.toLowerCase().includes(queryLower)
+            ))
       );
     }
 
     if (filteredCommands.length === 0) {
-      return query ? `No commands found matching "${query}".` : "No commands available.";
+      return query
+        ? `No commands found matching "${query}".`
+        : "No commands available.";
     }
 
     // Group commands by category
     const commandsByCategory: Record<string, typeof filteredCommands> = {};
-    filteredCommands.forEach(cmd => {
+    filteredCommands.forEach((cmd) => {
       if (!commandsByCategory[cmd.category]) {
         commandsByCategory[cmd.category] = [];
       }
@@ -57,12 +63,14 @@ export async function get_bot_commands(query?: string): Promise<string> {
         game: "🎮",
         general: "ℹ️",
         admin: "👑",
-        utility: "🔧"
+        utility: "🔧",
       };
 
-      result += `${categoryEmoji[category as keyof typeof categoryEmoji] || "📝"} **${category.toUpperCase()}**:\n`;
-      
-      commands.forEach(cmd => {
+      result += `${
+        categoryEmoji[category as keyof typeof categoryEmoji] || "📝"
+      } **${category.toUpperCase()}**:\n`;
+
+      commands.forEach((cmd) => {
         let aliasText = "";
         if (cmd.aliases && cmd.aliases.length > 0) {
           aliasText = ` (aliases: ${cmd.aliases.join(", ")})`;
@@ -74,9 +82,9 @@ export async function get_bot_commands(query?: string): Promise<string> {
         }
 
         result += `• *${cmd.name}*${aliasText}${statusText} - ${cmd.description}\n`;
-        
+
         if (cmd.cooldown) {
-          result += `  └─ Cooldown: ${cmd.cooldown/1000}s`;
+          result += `  └─ Cooldown: ${cmd.cooldown / 1000}s`;
           if (cmd.maxUses && cmd.maxUses > 1) {
             result += ` (max ${cmd.maxUses} uses)`;
           }
@@ -86,10 +94,10 @@ export async function get_bot_commands(query?: string): Promise<string> {
       result += "\n";
     }
 
-    result += "Use get_command_help(command_name) to get detailed help for a specific command.";
+    result +=
+      "Use get_command_help(command_name) to get detailed help for a specific command.";
 
     return result;
-
   } catch (error) {
     log.error("Error getting bot commands:", error);
     return "Error retrieving bot commands. Please try again.";
@@ -102,8 +110,10 @@ export async function get_command_help(commandName: string): Promise<string> {
       return "Command handler not available. Please try again later.";
     }
 
-    const command = commandHandlerInstance.getCommandByName(commandName.toLowerCase());
-    
+    const command = commandHandlerInstance.getCommandByName(
+      commandName.toLowerCase()
+    );
+
     if (!command) {
       return `Command "${commandName}" not found. Use get_bot_commands() to see available commands.`;
     }
@@ -117,7 +127,7 @@ export async function get_command_help(commandName: string): Promise<string> {
     }
 
     if (command.cooldown) {
-      helpText += `*Cooldown:* ${command.cooldown/1000} seconds`;
+      helpText += `*Cooldown:* ${command.cooldown / 1000} seconds`;
       if (command.maxUses && command.maxUses > 1) {
         helpText += ` (max ${command.maxUses} uses)`;
       }
@@ -141,7 +151,6 @@ export async function get_command_help(commandName: string): Promise<string> {
     }
 
     return helpText;
-
   } catch (error) {
     log.error("Error getting command help:", error);
     return "Error retrieving command help. Please try again.";
@@ -164,7 +173,7 @@ export async function execute_bot_command(
     }
 
     const { jid, user, sock, msg } = context;
-    
+
     // Execute the command through CommandHandler
     const result = await commandHandlerInstance.executeCommandForAI(
       commandName,
@@ -176,14 +185,17 @@ export async function execute_bot_command(
     );
 
     if (result.success) {
-      return result.message || `Command '${commandName}' executed successfully.`;
+      return (
+        result.message || `Command '${commandName}' executed successfully.`
+      );
     } else {
       return `Failed to execute command '${commandName}': ${result.error}`;
     }
-
   } catch (error) {
     log.error("Error executing bot command:", error);
-    return `Error executing command '${commandName}': ${error instanceof Error ? error.message : 'Unknown error'}`;
+    return `Error executing command '${commandName}': ${
+      error instanceof Error ? error.message : "Unknown error"
+    }`;
   }
 }
 

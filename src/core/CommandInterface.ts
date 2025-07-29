@@ -1,13 +1,14 @@
 import { proto } from "baileys";
 import { SessionService } from "../services/SessionService.js";
 import { WebSocketInfo } from "./types.js";
+import { CommandCategory } from "../types/command-category.js";
 
 export interface CommandInfo {
   name: string;
   aliases?: string[];
   description: string;
   helpText?: string; // Inline command documentation
-  category: "game" | "general" | "admin" | "utility";
+  category: CommandCategory;
   commandClass: new () => CommandInterface;
   cooldown?: number;
   maxUses?: number;

@@ -1,9 +1,10 @@
-import { CommandInterface, CommandInfo } from "../core/CommandInterface.js";
-import { getMongoClient } from "../core/mongo.js";
+import { CommandCategory } from "../../types/command-category.js";
+import { CommandInterface, CommandInfo } from "../../core/CommandInterface.js";
+import { getMongoClient } from "../../core/mongo.js";
 import { Collection, MongoClient } from "mongodb";
-import { getUserRoles } from "../core/config.js";
-import { WebSocketInfo } from "../core/types.js";
-import { SessionService } from "../services/SessionService.js";
+import { getUserRoles } from "../../core/config.js";
+import { WebSocketInfo } from "../../types/session.js";
+import { SessionService } from "../../services/SessionService.js";
 import { proto } from "baileys";
 
 // Collection name for group registry
@@ -14,7 +15,7 @@ export class RegisterGroupCommand extends CommandInterface {
     name: "registergroup",
     description: "Register this group for scheduled tasks (admin only)",
     helpText: `*Usage:*\n!registergroup\nRegister this group so it receives scheduled messages (admin only).`,
-    category: "admin",
+    category: CommandCategory.Admin,
     commandClass: RegisterGroupCommand,
     requiredRoles: ["admin"],
   };

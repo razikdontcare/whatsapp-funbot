@@ -1,5 +1,5 @@
 import { BotConfig, log } from "../core/config.js";
-import { Session } from "../core/types.js";
+import { Session } from "../types/session.js";
 import { getMongoClient } from "../core/mongo.js";
 import { Collection, Db } from "mongodb";
 

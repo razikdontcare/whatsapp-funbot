@@ -2,14 +2,14 @@ import { CommandInterface, CommandInfo } from "./CommandInterface.js";
 import { SessionService } from "../services/SessionService.js";
 import { CommandUsageService } from "../services/CommandUsageService.js";
 import { log, getUserRoles, getCurrentConfig } from "./config.js";
-import { WebSocketInfo } from "./types.js";
+import { WebSocketInfo } from "../types/session.js";
 import { CooldownManager } from "./CooldownManager.js";
 import { proto } from "baileys";
 import os from "os";
 
-import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { loadCommandInfos } from "./CommandLoader.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,50 +44,10 @@ export class CommandHandler {
 
   async registerCommands() {
     const commandsDir = path.resolve(__dirname, "../commands");
-
-    // Check if we're in development (TypeScript) or production (JavaScript)
-    const isDev = process.env.NODE_ENV !== "production";
-    const fileExtension = isDev ? ".ts" : ".js";
-
-    let files: string[] = [];
-    try {
-      files = fs
-        .readdirSync(commandsDir)
-        .filter((f) => f.endsWith(fileExtension));
-    } catch (error) {
-      // If no files found with one extension, try the other
-      const altExtension = isDev ? ".js" : ".ts";
-      try {
-        files = fs
-          .readdirSync(commandsDir)
-          .filter((f) => f.endsWith(altExtension));
-      } catch (altError) {
-        log.error(`No command files found in ${commandsDir}`);
-        return;
-      }
+    const commandInfos = await loadCommandInfos(commandsDir);
+    for (const info of commandInfos) {
+      this.registerCommand(info);
     }
-
-    log.info(`Loading ${files.length} command files from ${commandsDir}`);
-
-    for (const file of files) {
-      try {
-        const commandModule = await import(path.join(commandsDir, file));
-        // Support both default and named exports
-        const CommandClass =
-          commandModule.default || Object.values(commandModule)[0];
-        if (!CommandClass || !CommandClass.commandInfo) {
-          log.warn(
-            `Command file ${file} does not export a valid command class`
-          );
-          continue;
-        }
-        this.registerCommand(CommandClass.commandInfo);
-        log.debug(`Registered command: ${CommandClass.commandInfo.name}`);
-      } catch (error) {
-        log.error(`Failed to load command from ${file}:`, error);
-      }
-    }
-
     log.info(`Successfully registered ${this.commands.size} commands`);
   }
 

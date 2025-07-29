@@ -1,8 +1,9 @@
+import { CommandCategory } from "../../types/command-category.js";
 import { proto } from "baileys";
-import { CommandInfo, CommandInterface } from "../core/CommandInterface.js";
-import { BotConfig } from "../core/config.js";
-import { WebSocketInfo } from "../core/types.js";
-import { SessionService } from "../services/SessionService.js";
+import { CommandInfo, CommandInterface } from "../../core/CommandInterface.js";
+import { BotConfig } from "../../core/config.js";
+import { WebSocketInfo } from "../../types/session.js";
+import { SessionService } from "../../services/SessionService.js";
 import axios, { AxiosResponse } from "axios";
 
 type LyricsResponse = {
@@ -27,7 +28,7 @@ export class LyricsFindCommand extends CommandInterface {
     
 *Contoh:*
 • ${BotConfig.prefix}lyrics Cinta Luar Biasa`,
-    category: "general",
+    category: CommandCategory.General,
     commandClass: LyricsFindCommand,
     cooldown: 10000,
     maxUses: 5,
