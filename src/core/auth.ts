@@ -9,15 +9,28 @@ import baileys, {
 import { BotConfig, log } from "./config.js";
 import { getMongoClient } from "./mongo.js";
 
+/**
+ * MongoDB-based authentication state for Baileys WhatsApp library.
+ * Handles credential and key storage, retry logic, and serialization.
+ * @module auth
+ */
+
 const { proto, initAuthCreds } = baileys;
 
+/**
+ * MongoDB document for storing authentication data.
+ */
 interface AuthDocument {
   _id: string;
   data?: Binary;
 }
 
+/**
+ * Provides a Baileys-compatible authentication state backed by MongoDB.
+ * @param dbName MongoDB database name (defaults to BotConfig.sessionName)
+ * @param collectionPrefix Prefix for auth collections (default: "auth_")
+ */
 export const useMongoDBAuthState = async (
-  // mongoUri: string,
   dbName: string = BotConfig.sessionName,
   collectionPrefix: string = "auth_"
 ): Promise<{
@@ -26,34 +39,26 @@ export const useMongoDBAuthState = async (
   removeCreds: () => Promise<void>;
   close: () => Promise<void>;
 }> => {
-  log.debug("Connecting to " + dbName + " database");
-  log.debug("Using collection prefix: " + collectionPrefix);
-  // Use provided client or create a new one
-  let client = await getMongoClient();
+  log.debug(`Connecting to ${dbName} database`);
+  log.debug(`Using collection prefix: ${collectionPrefix}`);
+  const client = await getMongoClient();
   log.info("MongoDB connection established successfully");
-  // if (!client) {
-  //   try {
-  //     await client.connect();
-  //     log.info("MongoDB connection established successfully");
-  //   } catch (error) {
-  //     log.error("MongoDB connection error:", error);
-  //     throw new Error(
-  //       "Failed to connect to MongoDB. Check your connection string and network."
-  //     );
-  //   }
-  // }
   const db = client.db(dbName);
   const collections = {
     creds: db.collection<AuthDocument>(`${collectionPrefix}creds`),
     keys: db.collection<AuthDocument>(`${collectionPrefix}keys`),
   };
 
-  // Helper function to safely serialize data
+  /**
+   * Safely serialize data for MongoDB storage.
+   */
   const serializeData = (data: unknown): Binary => {
     return new Binary(Buffer.from(JSON.stringify(data, BufferJSON.replacer)));
   };
 
-  // Helper function to safely deserialize data
+  /**
+   * Safely deserialize data from MongoDB.
+   */
   const deserializeData = <T>(data: unknown): T | null => {
     try {
       if (data instanceof Binary) {
@@ -66,14 +71,15 @@ export const useMongoDBAuthState = async (
     }
   };
 
-  // Helper function to retry database operations
+  /**
+   * Retry a database operation with exponential backoff.
+   */
   const retryOperation = async <T>(
     operation: () => Promise<T>,
     maxRetries: number = 3,
     delayMs: number = 1000
   ): Promise<T> => {
     let lastError: Error | null = null;
-
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         return await operation();
@@ -83,16 +89,13 @@ export const useMongoDBAuthState = async (
           `Database operation failed (attempt ${attempt}/${maxRetries}):`,
           lastError.message
         );
-
         if (attempt < maxRetries) {
           log.info(`Retrying in ${delayMs}ms...`);
           await new Promise((resolve) => setTimeout(resolve, delayMs));
-          // Increase delay for next retry (exponential backoff)
           delayMs *= 1.5;
         }
       }
     }
-
     throw lastError || new Error("Operation failed after multiple retries");
   };
 

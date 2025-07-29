@@ -14,6 +14,10 @@ import { loadCommandInfos } from "./CommandLoader.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+/**
+ * Handles registration, dispatch, and permission checks for all bot commands.
+ * Manages command cooldowns, aliases, and session cleanup.
+ */
 export class CommandHandler {
   private commands: Map<string, CommandInfo> = new Map();
   private aliases: Map<string, string> = new Map();
@@ -21,19 +25,30 @@ export class CommandHandler {
   private initialized: boolean = false;
   private initializationPromise: Promise<void>;
 
+  /**
+   * @param sessionService Session management service
+   * @param usageService Optional command usage tracking service
+   */
   constructor(
     private sessionService: SessionService,
     private usageService?: CommandUsageService
   ) {
     this.initializationPromise = this.initialize();
-    setInterval(() => this.sessionService.cleanupExpiredSessions(), 1800000); // 30 minutes
+    // Clean up expired sessions every 30 minutes
+    setInterval(() => this.sessionService.cleanupExpiredSessions(), 1800000);
   }
 
+  /**
+   * Loads and registers all commands from the commands directory.
+   */
   private async initialize(): Promise<void> {
     await this.registerCommands();
     this.initialized = true;
   }
 
+  /**
+   * Wait for all commands to be registered and handler to be ready.
+   */
   async waitForInitialization(): Promise<void> {
     await this.initializationPromise;
   }
@@ -42,6 +57,9 @@ export class CommandHandler {
     return this.initialized;
   }
 
+  /**
+   * Register all commands found in the commands directory.
+   */
   async registerCommands() {
     const commandsDir = path.resolve(__dirname, "../commands");
     const commandInfos = await loadCommandInfos(commandsDir);
@@ -51,6 +69,9 @@ export class CommandHandler {
     log.info(`Successfully registered ${this.commands.size} commands`);
   }
 
+  /**
+   * Register a single command and its aliases.
+   */
   private registerCommand(info: CommandInfo): void {
     this.commands.set(info.name.toLowerCase(), info);
 
@@ -76,24 +97,32 @@ export class CommandHandler {
     return info ? info.category === "admin" : false;
   }
 
+  /**
+   * Get command info by name or alias.
+   */
   private getCommandInfo(command: string): CommandInfo | undefined {
     // Check if it's an alias first
     const actualCommand = this.aliases.has(command)
       ? this.aliases.get(command)!
       : command;
-
     return this.commands.get(actualCommand);
   }
 
+  /**
+   * Instantiate a command class by name or alias.
+   * @throws if command is not found
+   */
   private getCommandInstance(command: string): CommandInterface {
     const info = this.getCommandInfo(command);
     if (!info) {
       throw new Error(`Command not found: ${command}`);
     }
-
     return new info.commandClass();
   }
 
+  /**
+   * Check if a text message is a command (matches any prefix).
+   */
   async isCommand(text: string): Promise<boolean> {
     if (!text) return false;
 
@@ -108,6 +137,9 @@ export class CommandHandler {
     return false;
   }
 
+  /**
+   * Extract command and arguments from a message text.
+   */
   private async extractCommand(
     text: string
   ): Promise<{ command: string; args: string[] }> {
@@ -127,6 +159,9 @@ export class CommandHandler {
     return { command: command.toLocaleLowerCase(), args };
   }
 
+  /**
+   * Main command dispatcher. Handles built-in and registered commands, permission checks, cooldowns, and error handling.
+   */
   async handleCommand(
     text: string,
     jid: string,
@@ -288,6 +323,9 @@ export class CommandHandler {
     }
   }
 
+  /**
+   * Handle a game command, enforcing session rules.
+   */
   private async handleGameCommand(
     command: string,
     args: string[],
@@ -324,6 +362,9 @@ export class CommandHandler {
     );
   }
 
+  /**
+   * Handle a general (non-game, non-admin) command.
+   */
   private async handleGeneralCommand(
     command: string,
     args: string[],
@@ -343,6 +384,9 @@ export class CommandHandler {
     );
   }
 
+  /**
+   * Handle an admin command (TODO: add admin check).
+   */
   private async handleAdminCommand(
     command: string,
     args: string[],
@@ -364,6 +408,9 @@ export class CommandHandler {
     );
   }
 
+  /**
+   * Handle a utility command (fallback for uncategorized commands).
+   */
   private async handleUtilityCommand(
     command: string,
     args: string[],
@@ -383,6 +430,9 @@ export class CommandHandler {
     );
   }
 
+  /**
+   * Send a list of all available game commands to the user.
+   */
   private async listGames(jid: string, sock: WebSocketInfo) {
     const gameCommands = Array.from(this.commands.values()).filter(
       (cmd) => cmd.category === "game"
@@ -408,6 +458,9 @@ export class CommandHandler {
     });
   }
 
+  /**
+   * Handle the stop command, ending any active session for the user.
+   */
   private async handleStopCommand(
     jid: string,
     user: string,
@@ -428,6 +481,9 @@ export class CommandHandler {
     }
   }
 
+  /**
+   * Handle the help command, showing help for all or a specific command.
+   */
   private async handleHelpCommand(
     args: string[],
     jid: string,
@@ -521,6 +577,9 @@ export class CommandHandler {
     await sock.sendMessage(jid, { text: helpText });
   }
 
+  /**
+   * Handle the stats command, showing usage statistics.
+   */
   private async handleStatsCommand(
     jid: string,
     sock: WebSocketInfo,
@@ -605,25 +664,40 @@ export class CommandHandler {
   }
 
   // Methods for AI command access
+  /**
+   * Get all registered commands.
+   */
   getAllCommands(): CommandInfo[] {
     return Array.from(this.commands.values());
   }
 
+  /**
+   * Get all commands in a given category.
+   */
   getCommandsByCategory(category: CommandInfo["category"]): CommandInfo[] {
     return Array.from(this.commands.values()).filter(
       (cmd) => cmd.category === category
     );
   }
 
+  /**
+   * Get command info by name or alias.
+   */
   getCommandByName(name: string): CommandInfo | undefined {
     return this.getCommandInfo(name);
   }
 
+  /**
+   * Check if a command is available (not disabled).
+   */
   isCommandAvailable(name: string): boolean {
     const info = this.getCommandInfo(name);
     return info !== undefined && !info.disabled;
   }
 
+  /**
+   * Check if a user has permission to execute a command.
+   */
   async canUserExecuteCommand(name: string, user: string): Promise<boolean> {
     const info = this.getCommandInfo(name);
     if (!info || info.disabled) return false;
@@ -640,6 +714,9 @@ export class CommandHandler {
     return true;
   }
 
+  /**
+   * Execute a command on behalf of the AI (for AI integration).
+   */
   async executeCommandForAI(
     commandName: string,
     args: string[],

@@ -5,7 +5,11 @@ import { BotConfig } from "../core/config.js";
 import { WebSocketInfo } from "../types/session.js";
 import { getAllRegisteredGroupJids } from "../commands/admin/RegisterGroupCommand.js";
 
-// Example: Send a "Good morning!" message to all groups every day at 7am
+/**
+ * Schedules a daily morning message to all registered groups at 7am.
+ * Sends a custom welcome message if set, otherwise a default message.
+ * @param sock WhatsApp socket instance
+ */
 export async function scheduleDailyMorningMessage(sock: WebSocketInfo) {
   cron.schedule("0 7 * * *", async () => {
     const client = await getMongoClient();

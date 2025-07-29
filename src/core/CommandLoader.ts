@@ -4,10 +4,21 @@ import { fileURLToPath } from "url";
 import { CommandInfo } from "./CommandInterface.js";
 import { log } from "./config.js";
 
+/**
+ * Utility for loading command metadata from command files.
+ * Recursively scans a directory for command modules and extracts their CommandInfo.
+ * @module CommandLoader
+ */
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Recursively collect all files with the given extension in a directory and its subdirectories
+/**
+ * Recursively collect all files with the given extension in a directory and its subdirectories.
+ * @param dir Directory to search
+ * @param extension File extension to match (e.g. ".ts" or ".js")
+ * @returns Array of absolute file paths
+ */
 function getAllCommandFiles(dir: string, extension: string): string[] {
   let results: string[] = [];
   const list = fs.readdirSync(dir);
@@ -23,6 +34,11 @@ function getAllCommandFiles(dir: string, extension: string): string[] {
   return results;
 }
 
+/**
+ * Loads all CommandInfo objects from command files in the given directory.
+ * @param commandsDir Absolute path to the commands directory
+ * @returns Array of CommandInfo objects
+ */
 export async function loadCommandInfos(
   commandsDir: string
 ): Promise<CommandInfo[]> {
@@ -44,6 +60,7 @@ export async function loadCommandInfos(
   for (const file of files) {
     try {
       const commandModule = await import(file);
+      // Prefer default export, fallback to first named export
       const CommandClass =
         commandModule.default || Object.values(commandModule)[0];
       if (!CommandClass || !CommandClass.commandInfo) {

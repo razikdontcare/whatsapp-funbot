@@ -1,12 +1,15 @@
 import { log } from "./config.js";
 
+/**
+ * Info about a user's command cooldown.
+ */
 interface CooldownInfo {
   timestamp: number;
   count: number;
 }
 
 /**
- * Manages cooldowns for commands to prevent abuse
+ * Manages cooldowns for commands to prevent abuse.
  */
 export class CooldownManager {
   private cooldowns: Map<string, CooldownInfo> = new Map();
@@ -18,8 +21,7 @@ export class CooldownManager {
   }
 
   /**
-   * Checks if a command is on cooldown for a user
-   *
+   * Checks if a command is on cooldown for a user.
    * @param userId User ID
    * @param command Command name
    * @param cooldownMs Cooldown in milliseconds
@@ -60,7 +62,7 @@ export class CooldownManager {
   }
 
   /**
-   * Gets the remaining cooldown time in seconds
+   * Gets the remaining cooldown time in seconds.
    */
   getRemainingCooldown(
     userId: string,
@@ -81,7 +83,7 @@ export class CooldownManager {
   }
 
   /**
-   * Resets the cooldown for a user and command
+   * Resets the cooldown for a user and command.
    */
   resetCooldown(userId: string, command: string): void {
     const key = `${userId}:${command}`;
@@ -89,7 +91,7 @@ export class CooldownManager {
   }
 
   /**
-   * Removes expired cooldowns to prevent memory leaks
+   * Removes expired cooldowns to prevent memory leaks.
    */
   private cleanup(): void {
     const now = Date.now();

@@ -20,12 +20,14 @@ import { closeMongoClient, getMongoClient } from "./mongo.js";
 import NodeCache from "node-cache";
 import { setCommandHandler } from "../utils/ai_tools.js";
 
-// Import the broadcast function
+/**
+ * Broadcast function for QR and connection updates, injected from API module.
+ * Dynamically imported to avoid circular dependency.
+ */
 let broadcastQRUpdate:
   | ((type: "new_qr" | "connected" | "disconnected", data?: any) => void)
   | null = null;
 
-// Dynamically import to avoid circular dependency
 import("../api.js")
   .then((module) => {
     broadcastQRUpdate = module.broadcastQRUpdate;
@@ -42,6 +44,9 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 // Delay between reconnection attempts (in ms)
 const RECONNECT_INTERVAL = 3000;
 
+/**
+ * Main WhatsApp Bot client class. Handles connection, command dispatch, and session management.
+ */
 export class BotClient {
   private sock: WebSocketInfo | null = null;
   private commandHandler: CommandHandler;
@@ -57,7 +62,8 @@ export class BotClient {
   private usageService: CommandUsageService | null = null;
   private mongoClient: MongoClient | null = null;
   private groupCache = new NodeCache({ stdTTL: 5 * 60, useClones: false });
-  public currentQR: string | null = null; // Store current QR code
+  /** Stores the current QR code for API access */
+  public currentQR: string | null = null;
 
   constructor() {
     this.sessionService = new SessionService();
@@ -77,6 +83,9 @@ export class BotClient {
       });
   }
 
+  /**
+   * Start the WhatsApp bot client, connect to WhatsApp and MongoDB, and set up event listeners.
+   */
   async start() {
     try {
       // Close previous auth if exists
@@ -321,6 +330,12 @@ export class BotClient {
     }
   }
 
+  /**
+   * Extracts the command text from a message mentioning the bot.
+   * @param text The message text
+   * @param botId The bot's WhatsApp ID
+   * @returns The extracted command text, or null if not found
+   */
   private extractCommandFromMention(
     text: string,
     botId: string
@@ -330,6 +345,9 @@ export class BotClient {
     return match ? match[1].trim() : null;
   }
 
+  /**
+   * Clean up the current WebSocket connection.
+   */
   private cleanupSocket() {
     if (this.sock) {
       try {
@@ -341,6 +359,9 @@ export class BotClient {
     }
   }
 
+  /**
+   * Reset the bot's authentication state and log out, cleaning up resources.
+   */
   private async resetAndLogout() {
     if (!this.authState) return;
 
