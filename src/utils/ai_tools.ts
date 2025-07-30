@@ -22,6 +22,12 @@ export const tools: Groq.Chat.Completions.ChatCompletionTool[] = [
             type: "string",
             description: "The search query to use",
           },
+          topic: {
+            type: "string",
+            enum: ["general", "news", "finance"],
+            description:
+              "Optional topic to filter search results (general, news, finance)",
+          },
         },
         required: ["query"],
       },
