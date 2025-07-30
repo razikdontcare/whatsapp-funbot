@@ -3,10 +3,98 @@ import { log, BotConfig } from "../core/config.js";
 import { CommandHandler } from "../core/CommandHandler.js";
 import { WebSocketInfo } from "../core/types.js";
 import { proto } from "baileys";
+import type { Groq } from "groq-sdk";
 
 const tavilyClient = tavily({
   apiKey: BotConfig.tavilyApiKey,
 });
+
+export const tools: Groq.Chat.Completions.ChatCompletionTool[] = [
+  {
+    type: "function",
+    function: {
+      name: "web_search",
+      description: "Search the web for information",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "The search query to use",
+          },
+          topic: {
+            type: "string",
+            enum: ["general", "news", "finance"],
+            description:
+              "Optional topic to filter search results (general, news, finance)",
+          },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_bot_commands",
+      description:
+        "Get a list of available bot commands, optionally filtered by query",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description:
+              "Optional filter query to search for specific commands",
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_command_help",
+      description: "Get detailed help information for a specific bot command",
+      parameters: {
+        type: "object",
+        properties: {
+          commandName: {
+            type: "string",
+            description: "The name of the command to get help for",
+          },
+        },
+        required: ["commandName"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "execute_bot_command",
+      description:
+        "Execute a bot command with given arguments. Use this when the user wants to perform an action that requires running a bot command.",
+      parameters: {
+        type: "object",
+        properties: {
+          commandName: {
+            type: "string",
+            description: "The name of the command to execute",
+          },
+          args: {
+            type: "array",
+            items: {
+              type: "string",
+            },
+            description: "Arguments to pass to the command",
+          },
+        },
+        required: ["commandName", "args"],
+      },
+    },
+  },
+];
 
 // Global variable to store CommandHandler instance
 let commandHandlerInstance: CommandHandler | null = null;
@@ -22,27 +110,33 @@ export async function get_bot_commands(query?: string): Promise<string> {
     }
 
     const allCommands = commandHandlerInstance.getAllCommands();
-    
+
     let filteredCommands = allCommands;
-    
+
     // Filter by query if provided
     if (query) {
       const queryLower = query.toLowerCase();
-      filteredCommands = allCommands.filter(cmd => 
-        cmd.name.toLowerCase().includes(queryLower) ||
-        cmd.description.toLowerCase().includes(queryLower) ||
-        cmd.category.toLowerCase().includes(queryLower) ||
-        (cmd.aliases && cmd.aliases.some(alias => alias.toLowerCase().includes(queryLower)))
+      filteredCommands = allCommands.filter(
+        (cmd) =>
+          cmd.name.toLowerCase().includes(queryLower) ||
+          cmd.description.toLowerCase().includes(queryLower) ||
+          cmd.category.toLowerCase().includes(queryLower) ||
+          (cmd.aliases &&
+            cmd.aliases.some((alias) =>
+              alias.toLowerCase().includes(queryLower)
+            ))
       );
     }
 
     if (filteredCommands.length === 0) {
-      return query ? `No commands found matching "${query}".` : "No commands available.";
+      return query
+        ? `No commands found matching "${query}".`
+        : "No commands available.";
     }
 
     // Group commands by category
     const commandsByCategory: Record<string, typeof filteredCommands> = {};
-    filteredCommands.forEach(cmd => {
+    filteredCommands.forEach((cmd) => {
       if (!commandsByCategory[cmd.category]) {
         commandsByCategory[cmd.category] = [];
       }
@@ -57,12 +151,14 @@ export async function get_bot_commands(query?: string): Promise<string> {
         game: "🎮",
         general: "ℹ️",
         admin: "👑",
-        utility: "🔧"
+        utility: "🔧",
       };
 
-      result += `${categoryEmoji[category as keyof typeof categoryEmoji] || "📝"} **${category.toUpperCase()}**:\n`;
-      
-      commands.forEach(cmd => {
+      result += `${
+        categoryEmoji[category as keyof typeof categoryEmoji] || "📝"
+      } **${category.toUpperCase()}**:\n`;
+
+      commands.forEach((cmd) => {
         let aliasText = "";
         if (cmd.aliases && cmd.aliases.length > 0) {
           aliasText = ` (aliases: ${cmd.aliases.join(", ")})`;
@@ -74,9 +170,9 @@ export async function get_bot_commands(query?: string): Promise<string> {
         }
 
         result += `• *${cmd.name}*${aliasText}${statusText} - ${cmd.description}\n`;
-        
+
         if (cmd.cooldown) {
-          result += `  └─ Cooldown: ${cmd.cooldown/1000}s`;
+          result += `  └─ Cooldown: ${cmd.cooldown / 1000}s`;
           if (cmd.maxUses && cmd.maxUses > 1) {
             result += ` (max ${cmd.maxUses} uses)`;
           }
@@ -86,10 +182,10 @@ export async function get_bot_commands(query?: string): Promise<string> {
       result += "\n";
     }
 
-    result += "Use get_command_help(command_name) to get detailed help for a specific command.";
+    result +=
+      "Use get_command_help(command_name) to get detailed help for a specific command.";
 
     return result;
-
   } catch (error) {
     log.error("Error getting bot commands:", error);
     return "Error retrieving bot commands. Please try again.";
@@ -102,8 +198,10 @@ export async function get_command_help(commandName: string): Promise<string> {
       return "Command handler not available. Please try again later.";
     }
 
-    const command = commandHandlerInstance.getCommandByName(commandName.toLowerCase());
-    
+    const command = commandHandlerInstance.getCommandByName(
+      commandName.toLowerCase()
+    );
+
     if (!command) {
       return `Command "${commandName}" not found. Use get_bot_commands() to see available commands.`;
     }
@@ -117,7 +215,7 @@ export async function get_command_help(commandName: string): Promise<string> {
     }
 
     if (command.cooldown) {
-      helpText += `*Cooldown:* ${command.cooldown/1000} seconds`;
+      helpText += `*Cooldown:* ${command.cooldown / 1000} seconds`;
       if (command.maxUses && command.maxUses > 1) {
         helpText += ` (max ${command.maxUses} uses)`;
       }
@@ -141,7 +239,6 @@ export async function get_command_help(commandName: string): Promise<string> {
     }
 
     return helpText;
-
   } catch (error) {
     log.error("Error getting command help:", error);
     return "Error retrieving command help. Please try again.";
@@ -164,7 +261,7 @@ export async function execute_bot_command(
     }
 
     const { jid, user, sock, msg } = context;
-    
+
     // Execute the command through CommandHandler
     const result = await commandHandlerInstance.executeCommandForAI(
       commandName,
@@ -176,18 +273,24 @@ export async function execute_bot_command(
     );
 
     if (result.success) {
-      return result.message || `Command '${commandName}' executed successfully.`;
+      return (
+        result.message || `Command '${commandName}' executed successfully.`
+      );
     } else {
       return `Failed to execute command '${commandName}': ${result.error}`;
     }
-
   } catch (error) {
     log.error("Error executing bot command:", error);
-    return `Error executing command '${commandName}': ${error instanceof Error ? error.message : 'Unknown error'}`;
+    return `Error executing command '${commandName}': ${
+      error instanceof Error ? error.message : "Unknown error"
+    }`;
   }
 }
 
-export async function web_search(query: string): Promise<string> {
+export async function web_search(
+  query: string,
+  topic?: "general" | "news" | "finance"
+): Promise<string> {
   try {
     log.info(`Performing web search for query: ${query}`);
     if (!query) {
@@ -196,14 +299,15 @@ export async function web_search(query: string): Promise<string> {
     const response = await tavilyClient.search(query, {
       searchDepth: "advanced",
       includeAnswer: true,
+      topic,
     });
     if (response.answer && response.results && response.results.length > 0) {
       // url, title, and score
       const sources = response.results
         .map((result) => {
-          return `- [${result.title}](${result.url}) (Score: ${result.score})`;
+          return `[${result.title}](${result.url}) (Score: ${result.score})\n${result.content}`;
         })
-        .join("\n");
+        .join("\n\n");
       return `${response.answer}\n\nSumber:\n${sources}`;
     } else if (response.results && response.results.length > 0) {
       return response.results.map((result) => result.title).join("\n");

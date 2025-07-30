@@ -7,6 +7,7 @@ import { AIConversationService } from "../services/AIConversationService.js";
 import { AIResponseService } from "../services/AIResponseService.js";
 import Groq from "groq-sdk";
 import {
+  tools,
   web_search,
   get_bot_commands,
   get_command_help,
@@ -320,89 +321,6 @@ export class AskAICommand extends CommandInterface {
 
         messages.push(messageObj);
       }
-
-      // tools
-      const tools: Groq.Chat.Completions.ChatCompletionTool[] = [
-        {
-          type: "function",
-          function: {
-            name: "web_search",
-            description: "Search the web for information",
-            parameters: {
-              type: "object",
-              properties: {
-                query: {
-                  type: "string",
-                  description: "The search query to use",
-                },
-              },
-              required: ["query"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "get_bot_commands",
-            description:
-              "Get a list of available bot commands, optionally filtered by query",
-            parameters: {
-              type: "object",
-              properties: {
-                query: {
-                  type: "string",
-                  description:
-                    "Optional filter query to search for specific commands",
-                },
-              },
-              required: [],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "get_command_help",
-            description:
-              "Get detailed help information for a specific bot command",
-            parameters: {
-              type: "object",
-              properties: {
-                commandName: {
-                  type: "string",
-                  description: "The name of the command to get help for",
-                },
-              },
-              required: ["commandName"],
-            },
-          },
-        },
-        {
-          type: "function",
-          function: {
-            name: "execute_bot_command",
-            description:
-              "Execute a bot command with given arguments. Use this when the user wants to perform an action that requires running a bot command.",
-            parameters: {
-              type: "object",
-              properties: {
-                commandName: {
-                  type: "string",
-                  description: "The name of the command to execute",
-                },
-                args: {
-                  type: "array",
-                  items: {
-                    type: "string",
-                  },
-                  description: "Arguments to pass to the command",
-                },
-              },
-              required: ["commandName", "args"],
-            },
-          },
-        },
-      ];
 
       const response = await this.ai.chat.completions.create({
         messages,
