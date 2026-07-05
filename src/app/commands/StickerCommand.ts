@@ -604,14 +604,14 @@ export class StickerCommand extends CommandInterface {
           const result = await workerPool.run<Uint8Array>(
             processorPath,
             "createAnimatedSticker",
-            [new Uint8Array(mediaBuffer.buffer), useCrop, sourceExtension],
+            [new Uint8Array(mediaBuffer), useCrop, sourceExtension],
           );
           stickerBuffer = Buffer.from(result);
         } else {
           const result = await workerPool.run<Uint8Array>(
             processorPath,
             "createSticker",
-            [new Uint8Array(mediaBuffer.buffer), useCrop],
+            [new Uint8Array(mediaBuffer), useCrop],
           );
           stickerBuffer = Buffer.from(result);
         }
@@ -624,7 +624,7 @@ export class StickerCommand extends CommandInterface {
           processorPath,
           "addExif",
           [
-            new Uint8Array(stickerBuffer.buffer),
+            new Uint8Array(stickerBuffer),
             sanitizedPackName,
             sanitizedAuthorName,
           ],
