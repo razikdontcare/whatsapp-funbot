@@ -5,6 +5,7 @@ import {
   resolveAIPersonality,
   type AIPersonality,
 } from "../../shared/utils/promptLoader.js";
+import { getActiveMongoClient } from "../../infrastructure/config/mongo.js";
 
 export interface UserPreference {
   user: string; // WhatsApp JID
@@ -20,14 +21,20 @@ export interface UserPreference {
 }
 
 export class UserPreferenceService {
-  private collection: Collection<UserPreference>;
+  private dbName: string;
+  private collectionName: string;
+
+  private get collection(): Collection<UserPreference> {
+    return getActiveMongoClient().db(this.dbName).collection<UserPreference>(this.collectionName);
+  }
 
   constructor(
-    mongoClient: MongoClient,
+    _mongoClient: MongoClient,
     dbName = BotConfig.sessionName,
     collectionName = "user_preferences",
   ) {
-    this.collection = mongoClient.db(dbName).collection(collectionName);
+    this.dbName = dbName;
+    this.collectionName = collectionName;
   }
 
   async get(user: string): Promise<UserPreference | null> {

@@ -1,5 +1,6 @@
 import {Collection, MongoClient, ObjectId} from 'mongodb';
 import {BotConfig, log} from '../../infrastructure/config/config.js';
+import {getActiveMongoClient} from '../../infrastructure/config/mongo.js';
 
 export interface Reminder {
     _id?: ObjectId;
@@ -14,11 +15,14 @@ export interface Reminder {
 
 export class ReminderService {
     private static instance: ReminderService | null = null;
-    private collection: Collection<Reminder>;
+    private dbName: string;
 
-    private constructor(mongoClient: MongoClient) {
-        const dbName = BotConfig.sessionName;
-        this.collection = mongoClient.db(dbName).collection<Reminder>('reminders');
+    private get collection(): Collection<Reminder> {
+        return getActiveMongoClient().db(this.dbName).collection<Reminder>('reminders');
+    }
+
+    private constructor(_mongoClient: MongoClient, dbName = BotConfig.sessionName) {
+        this.dbName = dbName;
         // Ensure indexes asynchronously (don't block construction)
         this.ensureIndexes().catch((err) => log.error('ReminderService index init error:', err));
         log.info(`[ReminderService] Using database: ${dbName}`);

@@ -1,5 +1,6 @@
 import {Collection, MongoClient} from 'mongodb';
 import {BotConfig, getBotConfigService, log} from '../../infrastructure/config/config.js';
+import {getActiveMongoClient} from '../../infrastructure/config/mongo.js';
 
 export interface VIPUser {
     userJid: string; // WhatsApp JID
@@ -32,17 +33,27 @@ export interface VIPStats {
 
 export class VIPService {
     private static instance: VIPService | null = null;
-    private vipCollection: Collection<VIPUser>;
-    private codeCollection: Collection<VIPCode>;
+    private dbName: string;
+    private vipCollectionName: string;
+    private codeCollectionName: string;
+
+    private get vipCollection(): Collection<VIPUser> {
+        return getActiveMongoClient().db(this.dbName).collection<VIPUser>(this.vipCollectionName);
+    }
+
+    private get codeCollection(): Collection<VIPCode> {
+        return getActiveMongoClient().db(this.dbName).collection<VIPCode>(this.codeCollectionName);
+    }
 
     constructor(
-        mongoClient: MongoClient,
+        _mongoClient: MongoClient,
         dbName = BotConfig.sessionName,
         vipCollectionName = 'vip_users',
         codeCollectionName = 'vip_codes'
     ) {
-        this.vipCollection = mongoClient.db(dbName).collection(vipCollectionName);
-        this.codeCollection = mongoClient.db(dbName).collection(codeCollectionName);
+        this.dbName = dbName;
+        this.vipCollectionName = vipCollectionName;
+        this.codeCollectionName = codeCollectionName;
         // Don't call createIndexes here - will be called in getInstance
     }
 

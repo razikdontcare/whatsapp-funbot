@@ -152,12 +152,13 @@ export class BotClient {
             return message;
           },
           getMessage: async (key) => {
-            if (this.mongoClient && key.remoteJid && key.id) {
+            if (key.remoteJid && key.id) {
               try {
+                const activeClient = await getMongoClient();
                 const dbName = process.env.NODE_ENV !== "production"
                   ? `${BotConfig.sessionName}_dev`
                   : BotConfig.sessionName;
-                const db = this.mongoClient.db(dbName);
+                const db = activeClient.db(dbName);
                 const doc = await db.collection("messages").findOne({
                   remoteJid: key.remoteJid,
                   id: key.id
@@ -558,6 +559,7 @@ export class BotClient {
       // Reset connection state
       this.authState = null;
       this.reconnectAttempts = 0;
+      this.mongoClient = null;
 
       // Optional: exit the process or restart with fresh state
       // process.exit(0);
@@ -571,12 +573,13 @@ export class BotClient {
   }
 
   private async saveMessageToDb(m: proto.IWebMessageInfo) {
-    if (!this.mongoClient || !m.message || !m.key || !m.key.remoteJid || !m.key.id) return;
+    if (!m.message || !m.key || !m.key.remoteJid || !m.key.id) return;
     try {
+      const activeClient = await getMongoClient();
       const dbName = process.env.NODE_ENV !== "production"
         ? `${BotConfig.sessionName}_dev`
         : BotConfig.sessionName;
-      const db = this.mongoClient.db(dbName);
+      const db = activeClient.db(dbName);
 
       await db.collection("messages").updateOne(
         { remoteJid: m.key.remoteJid, id: m.key.id },
