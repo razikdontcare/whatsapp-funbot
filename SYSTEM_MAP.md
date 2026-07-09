@@ -2,8 +2,8 @@
 
 ## Metadata
 - **map_version**: 1.0.0
-- **last_updated**: 2026-07-05
-- **last_updated_by**: agent/b4048922-83ae-4e2f-a6d8-c4636831e00c
+- **last_updated**: 2026-07-09
+- **last_updated_by**: agent/fd7a9281-1924-4aa3-b324-a8752de33779
 
 ## Project Overview
 WhatsApp bot with AI integration and modular command system. Built with TypeScript/Bun, using Baileys for WhatsApp connectivity and Hono for the API dashboard.
@@ -81,7 +81,7 @@ WhatsApp bot with AI integration and modular command system. Built with TypeScri
 | :--- | :--- | :--- | :--- | :--- |
 | `src/infrastructure/config/auth.ts` | MongoDB-backed auth state for Baileys | `useMongoDBAuthState` | #infra | #config |
 | `src/infrastructure/config/config.ts` | Static and dynamic config initialization | `BotConfig`, `getCurrentConfig` | #infra | #config |
-| `src/infrastructure/config/mongo.ts` | Atomic MongoDB client connection management | `getMongoClient`, `isMongoConnected` | #infra | #infra |
+| `src/infrastructure/config/mongo.ts` | Atomic MongoDB client connection management | `getMongoClient`, `isMongoConnected`, `getActiveMongoClient` | #infra | #infra |
 | `src/infrastructure/config/scheduler.ts` | Initializes cron jobs | `scheduleVIPCleanup`, etc. | #infra | #bot |
 | `src/infrastructure/web/adminConsolePage.ts` | HTML rendering for admin dashboard | `renderAdminConsoleHtml` | #infra | #web |
 | `src/infrastructure/web/adminConsoleBody.ts` | Admin console body markup | `ADMIN_CONSOLE_BODY` | #infra | #web |
@@ -163,5 +163,6 @@ WhatsApp bot with AI integration and modular command system. Built with TypeScri
 - **2026-06-27** [minor] (agent/6b0e1efd-8c9d-4d88-97c0-16f329b7d8fe): Added auxiliary vision model pipeline in AskAICommand to process image inputs on text-only models (like DeepSeek).
 - **2026-06-27** [patch] (agent/b4048922-83ae-4e2f-a6d8-c4636831e00c): Fixed database collection caching reconnect disconnects, progressive reconnection logout loop, implemented recursive wrapper message extraction, and integrated MongoDB-backed message store in BotClient.
 - **2026-07-05** [patch] (agent/b4048922-83ae-4e2f-a6d8-c4636831e00c): Fixed sticker creation image format error by using safe TypedArray constructor instead of raw Buffer.buffer references.
+- **2026-07-09** [patch] (agent/fd7a9281-1924-4aa3-b324-a8752de33779): Fixed MongoDB disconnection issues during WhatsApp reconnection by removing cached database/collection instances in all service classes and using dynamic getters.
 
 

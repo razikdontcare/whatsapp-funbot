@@ -1,8 +1,9 @@
 import {Collection, MongoClient} from 'mongodb';
 import {BotConfig, log, UserRole} from '../../infrastructure/config/config.js';
+import {getActiveMongoClient} from '../../infrastructure/config/mongo.js';
 
 export interface StoredBotConfig {
-    _id: string;
+    _id?: string;
     // UI Settings
     prefix?: string;
     alternativePrefixes?: string[];
@@ -52,13 +53,19 @@ export interface StoredBotConfig {
 }
 
 export class BotConfigService {
-    private collection: Collection<StoredBotConfig>;
+    private dbName: string;
+    private collectionName: string;
     private cachedConfig: StoredBotConfig | null = null;
     private lastCacheUpdate: number = 0;
     private readonly CACHE_TTL = 60000; // 1 minute cache TTL
 
-    constructor(mongoClient: MongoClient, dbName = BotConfig.sessionName, collectionName = 'bot_config') {
-        this.collection = mongoClient.db(dbName).collection(collectionName);
+    private get collection(): Collection<StoredBotConfig> {
+        return getActiveMongoClient().db(this.dbName).collection<StoredBotConfig>(this.collectionName);
+    }
+
+    constructor(_mongoClient: MongoClient, dbName = BotConfig.sessionName, collectionName = 'bot_config') {
+        this.dbName = dbName;
+        this.collectionName = collectionName;
     }
 
     /**

@@ -1,5 +1,6 @@
 import {Collection, MongoClient} from 'mongodb';
 import {BotConfig} from '../../infrastructure/config/config.js';
+import {getActiveMongoClient} from '../../infrastructure/config/mongo.js';
 
 export interface GameStat {
     user: string; // WhatsApp JID
@@ -12,10 +13,16 @@ export interface GameStat {
 }
 
 export class GameLeaderboardService {
-    private collection: Collection<GameStat>;
+    private dbName: string;
+    private collectionName: string;
 
-    constructor(mongoClient: MongoClient, dbName = BotConfig.sessionName, collectionName = 'game_leaderboards') {
-        this.collection = mongoClient.db(dbName).collection(collectionName);
+    private get collection(): Collection<GameStat> {
+        return getActiveMongoClient().db(this.dbName).collection<GameStat>(this.collectionName);
+    }
+
+    constructor(_mongoClient: MongoClient, dbName = BotConfig.sessionName, collectionName = 'game_leaderboards') {
+        this.dbName = dbName;
+        this.collectionName = collectionName;
     }
 
     async getUserStat(user: string, game: string): Promise<GameStat | null> {

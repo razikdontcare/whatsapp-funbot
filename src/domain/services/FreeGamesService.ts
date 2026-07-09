@@ -1,5 +1,6 @@
 import { Collection, MongoClient } from "mongodb";
 import { BotConfig, log } from "../../infrastructure/config/config.js";
+import { getActiveMongoClient } from "../../infrastructure/config/mongo.js";
 
 export interface GamerPowerGiveaway {
   id: number;
@@ -35,14 +36,13 @@ interface PollNewGiveawaysOptions {
 export class FreeGamesService {
   private static instance: FreeGamesService | null = null;
 
-  private readonly collection: Collection<SeenGiveaway>;
+  private get collection(): Collection<SeenGiveaway> {
+    return getActiveMongoClient().db(BotConfig.sessionName).collection<SeenGiveaway>("freegames_seen");
+  }
 
   private readonly apiUrl = "https://www.gamerpower.com/api/giveaways";
 
-  private constructor(mongoClient: MongoClient) {
-    this.collection = mongoClient
-      .db(BotConfig.sessionName)
-      .collection<SeenGiveaway>("freegames_seen");
+  private constructor(_mongoClient: MongoClient) {
     this.ensureIndexes().catch((error) => {
       log.error("Failed to initialize FreeGamesService indexes:", error);
     });

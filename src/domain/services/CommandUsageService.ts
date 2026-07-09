@@ -1,5 +1,6 @@
 import { Collection, MongoClient } from 'mongodb';
 import { BotConfig } from '../../infrastructure/config/config.js';
+import { getActiveMongoClient } from '../../infrastructure/config/mongo.js';
 
 export interface CommandUsage {
   command: string;
@@ -9,10 +10,16 @@ export interface CommandUsage {
 }
 
 export class CommandUsageService {
-  private collection: Collection<CommandUsage>;
+  private dbName: string;
+  private collectionName: string;
 
-  constructor(mongoClient: MongoClient, dbName = BotConfig.sessionName, collectionName = 'command_usage') {
-    this.collection = mongoClient.db(dbName).collection(collectionName);
+  private get collection(): Collection<CommandUsage> {
+    return getActiveMongoClient().db(this.dbName).collection<CommandUsage>(this.collectionName);
+  }
+
+  constructor(_mongoClient: MongoClient, dbName = BotConfig.sessionName, collectionName = 'command_usage') {
+    this.dbName = dbName;
+    this.collectionName = collectionName;
   }
 
   async increment(command: string, user: string): Promise<void> {

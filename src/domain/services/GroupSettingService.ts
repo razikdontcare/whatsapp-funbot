@@ -1,5 +1,6 @@
 import { Collection, MongoClient } from "mongodb";
 import { BotConfig } from "../../infrastructure/config/config.js";
+import { getActiveMongoClient } from "../../infrastructure/config/mongo.js";
 
 export interface GroupSetting {
   group: string; // WhatsApp group JID
@@ -13,14 +14,20 @@ export interface GroupSetting {
 }
 
 export class GroupSettingService {
-  private collection: Collection<GroupSetting>;
+  private dbName: string;
+  private collectionName: string;
+
+  private get collection(): Collection<GroupSetting> {
+    return getActiveMongoClient().db(this.dbName).collection<GroupSetting>(this.collectionName);
+  }
 
   constructor(
-    mongoClient: MongoClient,
+    _mongoClient: MongoClient,
     dbName = BotConfig.sessionName,
     collectionName = "group_settings",
   ) {
-    this.collection = mongoClient.db(dbName).collection(collectionName);
+    this.dbName = dbName;
+    this.collectionName = collectionName;
   }
 
   async get(group: string): Promise<GroupSetting | null> {
