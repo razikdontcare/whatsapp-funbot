@@ -1,14 +1,22 @@
 import {BotConfig, log} from '../../infrastructure/config/config.js';
 import {Session} from '../../shared/types/types.js';
-import {getMongoClient} from '../../infrastructure/config/mongo.js';
+import {getMongoClient, getActiveMongoClient} from '../../infrastructure/config/mongo.js';
 import {Collection, Db} from 'mongodb';
 
 export class SessionService {
     private sessions: Map<string, Map<string, Session>> = new Map();
-    private db: Db | null = null;
-    private sessionCollection: Collection | null = null;
     private initialized: boolean = false;
     private initPromise: Promise<void> | null = null;
+
+    private get sessionCollection(): Collection | null {
+        try {
+            const client = getActiveMongoClient();
+            const dbName = process.env.NODE_ENV === 'production' ? BotConfig.sessionName : `${BotConfig.sessionName}_dev`;
+            return client.db(dbName).collection('sessions');
+        } catch {
+            return null;
+        }
+    }
 
     constructor() {
         this.initPromise = this.initialize();
@@ -164,18 +172,17 @@ export class SessionService {
 
     private async initialize(): Promise<void> {
         try {
-            const client = await getMongoClient();
-            this.db = client.db(
-                process.env.NODE_ENV === 'production' ? BotConfig.sessionName : `${BotConfig.sessionName}_dev`
-            );
-            this.sessionCollection = this.db.collection('sessions');
-
-            // Create indexes for better query performance
-            await this.sessionCollection.createIndex({jid: 1, user: 1});
+            await getMongoClient();
+            const coll = this.sessionCollection;
+            if (coll) {
+                // Create indexes for better query performance
+                await coll.createIndex({jid: 1, user: 1});
+            }
 
             await this.loadSessionsFromDB();
             this.initialized = true;
-            log.info('SessionService initialized with MongoDB on ' + this.db.databaseName);
+            const dbName = process.env.NODE_ENV === 'production' ? BotConfig.sessionName : `${BotConfig.sessionName}_dev`;
+            log.info('SessionService initialized with MongoDB on ' + dbName);
         } catch (error) {
             log.error('Failed to initialize MongoDB for sessions:', error);
             // Fallback to in-memory only

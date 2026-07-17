@@ -1,4 +1,4 @@
-import { getMongoClient } from '../../infrastructure/config/mongo.js';
+import { getMongoClient, getActiveMongoClient } from '../../infrastructure/config/mongo.js';
 import { Collection, Db } from 'mongodb';
 import { BotConfig, log } from '../../infrastructure/config/config.js';
 
@@ -21,10 +21,18 @@ export class AIConversationService {
   private static instance: AIConversationService | null = null;
   private static readonly SESSION_TIMEOUT = 10 * 60 * 1000; // 10 minutes
   private sessions: Map<string, AIConversationSession> = new Map();
-  private db: Db | null = null;
-  private conversationCollection: Collection | null = null;
   private initialized: boolean = false;
   private cleanupInterval: NodeJS.Timeout | null = null;
+
+  private get conversationCollection(): Collection | null {
+    try {
+      const client = getActiveMongoClient();
+      const dbName = process.env.NODE_ENV === 'production' ? BotConfig.sessionName : `${BotConfig.sessionName}_dev`;
+      return client.db(dbName).collection('ai_conversations');
+    } catch {
+      return null;
+    }
+  }
 
   private constructor() {
     this.initialize();
@@ -173,14 +181,12 @@ export class AIConversationService {
 
   private async initialize(): Promise<void> {
     try {
-      const client = await getMongoClient();
-      this.db = client.db(
-        process.env.NODE_ENV === 'production' ? BotConfig.sessionName : `${BotConfig.sessionName}_dev`
-      );
-      this.conversationCollection = this.db.collection('ai_conversations');
-
-      // Create index for automatic expiration
-      await this.conversationCollection.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+      await getMongoClient();
+      const coll = this.conversationCollection;
+      if (coll) {
+        // Create index for automatic expiration
+        await coll.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+      }
 
       await this.loadSessionsFromDB();
       this.startCleanupInterval();

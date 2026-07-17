@@ -1,4 +1,4 @@
-import {getMongoClient} from '../../infrastructure/config/mongo.js';
+import {getMongoClient, getActiveMongoClient} from '../../infrastructure/config/mongo.js';
 import {Collection, Db} from 'mongodb';
 import {BotConfig, log} from '../../infrastructure/config/config.js';
 
@@ -16,10 +16,18 @@ export interface AIGroupResponse {
 export class AIResponseService {
     private static instance: AIResponseService | null = null;
     private static readonly RESPONSE_RETENTION_TIME = 10 * 60 * 1000; // 10 minutes
-    private db: Db | null = null;
-    private responsesCollection: Collection | null = null;
     private initialized: boolean = false;
     private cleanupInterval: NodeJS.Timeout | null = null;
+
+    private get responsesCollection(): Collection | null {
+        try {
+            const client = getActiveMongoClient();
+            const dbName = process.env.NODE_ENV === 'production' ? BotConfig.sessionName : `${BotConfig.sessionName}_dev`;
+            return client.db(dbName).collection('ai_group_responses');
+        } catch {
+            return null;
+        }
+    }
 
     private constructor() {
         this.initialize();
@@ -139,16 +147,14 @@ export class AIResponseService {
 
     private async initialize(): Promise<void> {
         try {
-            const client = await getMongoClient();
-            this.db = client.db(
-                process.env.NODE_ENV === 'production' ? BotConfig.sessionName : `${BotConfig.sessionName}_dev`
-            );
-            this.responsesCollection = this.db.collection('ai_group_responses');
-
-            // Create indexes
-            await this.responsesCollection.createIndex({expiresAt: 1}, {expireAfterSeconds: 0});
-            await this.responsesCollection.createIndex({groupId: 1, timestamp: -1});
-            await this.responsesCollection.createIndex({responseId: 1}, {unique: true});
+            await getMongoClient();
+            const coll = this.responsesCollection;
+            if (coll) {
+                // Create indexes
+                await coll.createIndex({expiresAt: 1}, {expireAfterSeconds: 0});
+                await coll.createIndex({groupId: 1, timestamp: -1});
+                await coll.createIndex({responseId: 1}, {unique: true});
+            }
 
             this.startCleanupInterval();
             this.initialized = true;

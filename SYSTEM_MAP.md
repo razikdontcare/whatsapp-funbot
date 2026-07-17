@@ -2,7 +2,7 @@
 
 ## Metadata
 - **map_version**: 1.0.0
-- **last_updated**: 2026-07-09
+- **last_updated**: 2026-07-18
 - **last_updated_by**: agent/fd7a9281-1924-4aa3-b324-a8752de33779
 
 ## Project Overview
@@ -164,5 +164,6 @@ WhatsApp bot with AI integration and modular command system. Built with TypeScri
 - **2026-06-27** [patch] (agent/b4048922-83ae-4e2f-a6d8-c4636831e00c): Fixed database collection caching reconnect disconnects, progressive reconnection logout loop, implemented recursive wrapper message extraction, and integrated MongoDB-backed message store in BotClient.
 - **2026-07-05** [patch] (agent/b4048922-83ae-4e2f-a6d8-c4636831e00c): Fixed sticker creation image format error by using safe TypedArray constructor instead of raw Buffer.buffer references.
 - **2026-07-09** [patch] (agent/fd7a9281-1924-4aa3-b324-a8752de33779): Fixed MongoDB disconnection issues during WhatsApp reconnection by removing cached database/collection instances in all service classes and using dynamic getters.
+- **2026-07-18** [patch] (agent/fd7a9281-1924-4aa3-b324-a8752de33779): Extended MongoDB lazy collection getter refactoring to remaining database services (AIConversationService, AIResponseService, SessionService) to prevent MongoNotConnectedError in all commands/AI pipeline.
 
 
