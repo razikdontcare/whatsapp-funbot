@@ -391,9 +391,9 @@ export class AskAICommand extends CommandInterface {
 
           const base64Content = imageInput.dataUrl.split(";base64,").pop() || "";
           const imageBuffer = Buffer.from(base64Content, "base64");
-          
+
           const userPrompt = lastUserMessage || "Describe this image in detail.";
-          
+
           const response = await generateText({
             model: auxiliaryRoute.model,
             messages: [
@@ -842,7 +842,7 @@ You have identified a research-heavy request. Follow these steps for maximum acc
                 return `${emoji} *${readableName}*`;
               });
 
-              const statusText = `🛠️ *AI sedang bekerja:*\n\n${toolDescriptions.join("\n")}${text ? `\n\n_${text.slice(0, 100).trim()}_` : ""}`;
+              const statusText = `🛠️ *AI sedang bekerja:*\n\n${toolDescriptions.join("\n")}`;
 
               if (!statusMsgKey) {
                 const sent = await sock.sendMessage(jid, { text: statusText });
@@ -852,6 +852,14 @@ You have identified a research-heavy request. Follow these steps for maximum acc
                   text: statusText,
                   edit: statusMsgKey,
                 });
+              }
+
+              if (text?.trim()) {
+                if (msg) {
+                  await reply_chat_message(text.trim(), { jid, sock, msg });
+                } else {
+                  await sock.sendMessage(jid, { text: text.trim() });
+                }
               }
             }
           }
@@ -870,27 +878,9 @@ You have identified a research-heavy request. Follow these steps for maximum acc
         }
       }
 
-      // Clean up the status/loading message
-      if (statusMsgKey && jid && sock) {
-        try {
-          await sock.sendMessage(jid, { delete: statusMsgKey });
-        } catch (err) {
-          log.warn("Failed to delete AI status/loading message:", err);
-        }
-      }
-
       return result.text || "Tidak ada jawaban yang diberikan oleh AI.";
     } catch (error) {
       console.error("Error fetching AI completion:", error);
-
-      // Clean up the status/loading message on error
-      if (statusMsgKey && jid && sock) {
-        try {
-          await sock.sendMessage(jid, { delete: statusMsgKey });
-        } catch (err) {
-          log.warn("Failed to delete AI status/loading message on error:", err);
-        }
-      }
 
       try {
         const userFacing =

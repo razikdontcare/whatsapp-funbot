@@ -15,7 +15,7 @@ export function formatResponseForWhatsApp(text: string): string {
 
   // 1. Clean up list points first (standardize bullet points to simple dashes)
   // This must be done before bold/italic to prevent list asterisks from being treated as italic
-  formatted = formatted.replace(/^\s*[\*\+]\s+/gm, "- ");
+  formatted = formatted.replace(/^\s*[*+]\s+/gm, "- ");
 
   // 2. Convert headers (# Header) to temporary bold uppercase placeholders
   formatted = formatted.replace(/^(#{1,6})\s+(.+)$/gm, (match, hashes, headerText) => {
@@ -24,7 +24,7 @@ export function formatResponseForWhatsApp(text: string): string {
 
   // 3. Convert nested bold + italic (***text*** or **_text_**) to temporary placeholders
   formatted = formatted.replace(/\*\*\*([^*]+)\*\*\*/g, ":::BISTART:::$1:::BIEND:::");
-  formatted = formatted.replace(/\*\*\_([^_]+)\_\*\*/g, ":::BISTART:::$1:::BIEND:::");
+  formatted = formatted.replace(/\*\*_([^_]+)_\*\*/g, ":::BISTART:::$1:::BIEND:::");
 
   // 4. Convert standard markdown bold (**text** or __text__) to temporary placeholders
   formatted = formatted.replace(/\*\*([^*]+)\*\//g, ":::BSTART:::$1:::BEND:::格式"); // Support malformed markdown bold closing
