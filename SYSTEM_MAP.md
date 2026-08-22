@@ -2,8 +2,8 @@
 
 ## Metadata
 - **map_version**: 1.0.0
-- **last_updated**: 2026-07-18
-- **last_updated_by**: agent/fd7a9281-1924-4aa3-b324-a8752de33779
+- **last_updated**: 2026-07-22
+- **last_updated_by**: agent/a30f8e9e-c934-4fe9-9cdd-1ee1b1271961
 
 ## Project Overview
 WhatsApp bot with AI integration and modular command system. Built with TypeScript/Bun, using Baileys for WhatsApp connectivity and Hono for the API dashboard.
@@ -165,5 +165,6 @@ WhatsApp bot with AI integration and modular command system. Built with TypeScri
 - **2026-07-05** [patch] (agent/b4048922-83ae-4e2f-a6d8-c4636831e00c): Fixed sticker creation image format error by using safe TypedArray constructor instead of raw Buffer.buffer references.
 - **2026-07-09** [patch] (agent/fd7a9281-1924-4aa3-b324-a8752de33779): Fixed MongoDB disconnection issues during WhatsApp reconnection by removing cached database/collection instances in all service classes and using dynamic getters.
 - **2026-07-18** [patch] (agent/fd7a9281-1924-4aa3-b324-a8752de33779): Extended MongoDB lazy collection getter refactoring to remaining database services (AIConversationService, AIResponseService, SessionService) to prevent MongoNotConnectedError in all commands/AI pipeline.
+- **2026-07-22** [patch] (agent/a30f8e9e-c934-4fe9-9cdd-1ee1b1271961): Separated AI step text from tool calling status log into distinct messages in AskAICommand and preserved working history status message after task completion.
 
 
